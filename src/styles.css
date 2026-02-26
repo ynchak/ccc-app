@@ -56,7 +56,7 @@ code {
   --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.14), 0 4px 8px rgba(0, 0, 0, 0.06);
   --shadow-fly: 0 16px 40px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.08);
 
-  --sans: "Geist", "Inter" system-ui, -apple-system, sans-serif;
+  --sans: "Geist", "Inter", "Roboto", -apple-system, sans-serif;
   --mono: "Cascadia Code", "Consolas", ui-monospace, monospace;
   --sidebar-w: 280px;
 

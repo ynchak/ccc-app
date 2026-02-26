@@ -92,7 +92,7 @@ export class CsvFileRepository implements ICsvFileRepository {
 
 export class GoodsRepository implements IGoodsRepository {
   // Write in chunks to avoid memory spikes with large files
-  async bulkInsert(goods: Omit<Good, "id">[], chunkSize = 500): Promise<void> {
+  async bulkInsert(goods: Omit<Good, "id">[], chunkSize = 1000): Promise<void> {
     for (let i = 0; i < goods.length; i += chunkSize) {
       await db.goods.bulkAdd(goods.slice(i, i + chunkSize) as Good[]);
     }
