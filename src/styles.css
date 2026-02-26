@@ -907,3 +907,65 @@ body {
   transform: scale(0.96);
   background-color: rgba(0, 0, 0, 0.08);
 }
+
+.slider-container {
+  position: relative;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+/* Сами стрелки */
+.slider-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.9); /* Светлый фон */
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0; /* Скрыты по умолчанию */
+  transition: all 0.2s ease;
+  z-index: 10;
+  padding: 0;
+}
+
+.slider-arrow svg {
+  width: 24px;
+  height: 24px;
+  fill: #333;
+}
+
+/* Показываем стрелки при наведении на карточку */
+.good-card:hover .slider-arrow {
+  opacity: 1;
+}
+
+.slider-arrow:hover {
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.slider-arrow.prev { left: 8px; }
+.slider-arrow.next { right: 8px; }
+
+/* Маленький счетчик внизу */
+.img-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  pointer-events: none; /* Чтобы не мешал кликам */
+}

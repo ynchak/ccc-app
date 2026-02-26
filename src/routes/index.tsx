@@ -248,14 +248,26 @@ interface GoodCardProps {
 }
 
 function GoodCard({ good, selected, onSelect, idx }: GoodCardProps) {
-  const firstImage = good.goods_images_url?.[0];
+  const images = good.goods_images_url || [];
+  const [currentImgIdx, setCurrentImgIdx] = useState(0);
 
-  const handleOpenInNewTab = (e) => {
-    e.stopPropagation(); // Важно: чтобы карточка не выделилась при клике на кнопку
-    // Предположим, у вас есть URL товара или ID для формирования ссылки
+  // Переключение фото
+  const handlePrevImg = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Чтобы не выбралась карточка
+    setCurrentImgIdx((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+  };
+
+  const handleNextImg = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Чтобы не выбралась карточка
+    setCurrentImgIdx((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+  };
+
+  const handleOpenInNewTab = (e: React.MouseEvent) => {
+    e.stopPropagation();
     const url = `https://gomer.rozetka.company/gomer/items/source/${good.gomer_sync_source_id}?ItemSearch[id]=${good.goods_id}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
+
   const handleClick = useCallback(
     (e: React.MouseEvent) => onSelect(good.goods_id, idx, e.shiftKey),
     [good.goods_id, idx, onSelect],
@@ -266,44 +278,45 @@ function GoodCard({ good, selected, onSelect, idx }: GoodCardProps) {
       className={`good-card${selected ? ` good-card--selected` : ``}`}
       onClick={handleClick}
     >
+      {/* Чекбокс */}
       <div className={`card-check${selected ? ` card-check--on` : ``}`}>
         {selected && (
-          <svg viewBox="0 0 10 8" fill="none">
-            <path
-              d="M1 4l3 3 5-6"
-              stroke="#000"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <svg viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#000" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
         )}
       </div>
 
-      <div className="card-img">
-        {firstImage ? (
-          <img src={firstImage} alt={good.goods_title} loading="lazy" />
-        ) : (
-          <span className="no-img">NO IMG</span>
-        )}
-        {good.goods_images_url.length > 1 && (
-          <span className="img-count">+{good.goods_images_url.length}</span>
-        )}
-      </div>
+      {/* Слайдер изображений */}
+      <div className="card-img slider-container">
+  {images.length > 0 ? (
+    <>
+      <img src={images[currentImgIdx]} alt={good.goods_title} loading="lazy" />
+      
+      {images.length > 1 && (
+        <>
+          {/* Кнопки теперь внутри контейнера с картинкой */}
+          <button type="button" className="slider-arrow prev" onClick={handlePrevImg}>
+            <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+          </button>
+          
+          <button type="button" className="slider-arrow next" onClick={handleNextImg}>
+            <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+          </button>
+
+          <div className="img-badge">
+            {currentImgIdx + 1} / {images.length}
+          </div>
+        </>
+      )}
+    </>
+  ) : (
+    <span className="no-img">NO IMG</span>
+  )}
+</div>
+
       <div className="card-body">
         <p className="card-title">{good.goods_title || "—"}</p>
-        {/*<dl className="card-meta">
-          <dt>ID</dt>
-          <dd>{good.goods_id}</dd>
-          <dt>Source</dt>
-          <dd>{good.gomer_sync_source_id}</dd>
-        </dl>*/}
         <div className="card-actions">
-          <button
-            className="open-btn"
-            onClick={handleOpenInNewTab}
-            title="Открыть в новой вкладке"
-          >
+          <button className="open-btn" onClick={handleOpenInNewTab}>
             🔗 Открыть
           </button>
         </div>
