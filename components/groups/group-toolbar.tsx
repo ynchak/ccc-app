@@ -236,21 +236,13 @@ export function GroupHeaderControls({
               className="h-2 w-full cursor-pointer accent-primary"
               aria-label="Ширина картки в пікселях"
             />
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                min={CARD_WIDTH_MIN}
-                max={CARD_WIDTH_MAX}
-                step={CARD_WIDTH_STEP}
-                value={cardSize}
-                onChange={(event) => {
-                  const value = event.target.valueAsNumber;
-                  if (Number.isFinite(value)) setCardSize(value);
-                }}
-                className="h-8 w-24 tabular-nums"
-                aria-label="Ширина картки"
-              />
-              <span className="text-xs text-muted-foreground">px</span>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">
+                {CARD_WIDTH_MIN} px
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {CARD_WIDTH_MAX} px
+              </span>
             </div>
           </div>
         </DropdownMenuContent>

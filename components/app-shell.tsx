@@ -358,7 +358,7 @@ export function AppShell() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
-          <div className="flex flex-wrap items-center gap-2 px-4 py-2.5">
+          <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center gap-2 px-4 py-2.5">
             <Button
               variant="ghost"
               size="icon-sm"
@@ -440,19 +440,21 @@ export function AppShell() {
 
           {activeDataset ? (
             <div className="border-t px-4 py-2">
-              <GroupFilterBar
-                onMergeSelected={() =>
-                  setMergeGroupIds([
-                    ...useAppStore.getState().selectedGroupIds,
-                  ])
-                }
-              />
+              <div className="mx-auto w-full max-w-[1440px]">
+                <GroupFilterBar
+                  onMergeSelected={() =>
+                    setMergeGroupIds([
+                      ...useAppStore.getState().selectedGroupIds,
+                    ])
+                  }
+                />
+              </div>
             </div>
           ) : null}
         </header>
 
         <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[1600px] px-4 py-4">
+          <div className="mx-auto w-full max-w-[1440px] px-4 py-4">
             {!activeDataset ? (
               <Empty className="border">
                 <EmptyHeader>
