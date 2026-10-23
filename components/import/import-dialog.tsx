@@ -95,6 +95,10 @@ export function ImportDialog({
   } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [suggestColors, setSuggestColors] = useState(false);
+  const [modelProgress, setModelProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const busy =
@@ -105,6 +109,7 @@ export function ImportDialog({
     setError(null);
     setFileSaved(false);
     setCleanupProgress(null);
+    setModelProgress(null);
     setIsDragging(false);
     setSuggestColors(false);
   };
@@ -132,7 +137,11 @@ export function ImportDialog({
         (done, total) => {
           setCleanupProgress({ done, total });
         },
-        { suggestColors },
+        {
+          suggestColors,
+          onModelProgress: (done, total) =>
+            setModelProgress({ done, total }),
+        },
       );
       setStage("done");
 
@@ -321,9 +330,11 @@ export function ImportDialog({
               active={stage === "cleaning"}
               done={stage === "done"}
               detail={
-                cleanupProgress
-                  ? `Оброблено ${cleanupProgress.done} з ${cleanupProgress.total}`
-                  : undefined
+                modelProgress
+                  ? `Перевірка моделей: ${modelProgress.done} з ${modelProgress.total}`
+                  : cleanupProgress
+                    ? `Оброблено ${cleanupProgress.done} з ${cleanupProgress.total}`
+                    : undefined
               }
             />
             <p className="pt-1 text-xs text-muted-foreground">

@@ -199,7 +199,10 @@ interface AppState {
   deleteGroup: (groupId: number) => Promise<void>;
   cleanTitlesWithLlm: (
     onProgress?: (done: number, total: number) => void,
-    options?: { suggestColors?: boolean },
+    options?: {
+      suggestColors?: boolean;
+      onModelProgress?: (done: number, total: number) => void;
+    },
   ) => Promise<CleanupRunResult>;
   resetGroupTitle: (groupId: number) => Promise<boolean>;
   applyMergeSuggestion: (aId: number, bId: number) => Promise<boolean>;
@@ -1485,6 +1488,8 @@ export const useAppStore = create<AppState>()(
             const jevPairs = buildJevPairs(next, state.products, candidatePairs);
 
             if (jevPairs.length > 0) {
+              options?.onModelProgress?.(0, jevPairs.length);
+              let jevProcessed = 0;
               const jevBatches = chunkArray(jevPairs, JEV_BATCH_SIZE);
               const decisions: JevPairResult[] = [];
               let jevBatchIndex = 0;
@@ -1502,6 +1507,11 @@ export const useAppStore = create<AppState>()(
                     );
                     costUsd += usageCost(data.usage);
                     decisions.push(...data.results);
+                    jevProcessed += batch.length;
+                    options?.onModelProgress?.(
+                      Math.min(jevProcessed, jevPairs.length),
+                      jevPairs.length,
+                    );
                   } catch (error) {
                     if (error instanceof JevNotConfiguredError) {
                       jevSkipped = true;
