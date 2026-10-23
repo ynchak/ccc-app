@@ -42,6 +42,7 @@ export function isCardWidth(value: unknown): value is CardWidth {
 /** CSS-сетка карточек с выбранной шириной. */
 export function cardGridStyle(width: CardWidth): CSSProperties {
   return {
-    gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${width}px), 1fr))`,
+    gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${width}px), ${width}px))`,
+    justifyContent: "center",
   };
 }
