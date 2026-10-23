@@ -8,11 +8,11 @@ import {
   Edit02Icon,
   FileImportIcon,
   Folder01Icon,
-  GroupLayersIcon,
   MoreHorizontalIcon,
 } from "@hugeicons/core-free-icons";
 
 import { LogoutButton } from "@/components/auth/logout-button";
+import { BrandMark } from "@/components/brand-mark";
 import { ThemeSelect } from "@/components/theme-select";
 import {
   AlertDialog,
@@ -128,12 +128,9 @@ export function AppSidebar({
         } ${collapsed ? "lg:hidden" : ""}`}
       >
         <div className="flex items-center gap-2 border-b px-4 py-4">
-          <HugeiconsIcon
-            icon={GroupLayersIcon}
-            className="size-5 text-muted-foreground"
-          />
+          <BrandMark className="size-5" />
           <div className="min-w-0">
-            <h1 className="truncate text-sm font-semibold">Складка</h1>
+            <h1 className="truncate text-sm font-semibold">Akin</h1>
             <p className="truncate text-xs text-muted-foreground">
               групування товарів
             </p>

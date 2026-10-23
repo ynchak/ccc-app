@@ -15,7 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Складка — групування товарів",
+  title: "Akin — групування товарів",
+  applicationName: "Akin",
   description:
     "Локальне групування товарів за фотографіями та експорт у XLSX",
 };
