@@ -27,8 +27,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
-  CARD_SIZE_OPTIONS,
-  type CardSize,
+  CARD_WIDTH_MAX,
+  CARD_WIDTH_MIN,
+  CARD_WIDTH_STEP,
 } from "@/lib/card-size";
 import { groupsLabel, productsLabel, singlesLabel } from "@/lib/plural";
 import {
@@ -108,9 +109,7 @@ export function GroupHeaderControls({
 
   const sortLabel = (value: SortBy) => SORT_LABELS[value] ?? "Сортування";
 
-  const cardSizeLabel = (value: CardSize) =>
-    CARD_SIZE_OPTIONS.find((option) => option.value === value)?.label ??
-    "Середні";
+
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -208,25 +207,52 @@ export function GroupHeaderControls({
             <Button
               variant="outline"
               size="icon"
-              aria-label="Розмір карток"
-              title={`Картки: ${cardSizeLabel(cardSize)}`}
+              aria-label="Ширина карток"
+              title={`Картки: ${cardSize}px`}
             />
           }
         >
           <HugeiconsIcon icon={GridViewIcon} />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-44">
-          <DropdownMenuGroup>
-            {CARD_SIZE_OPTIONS.map((option) => (
-              <DropdownMenuItem
-                key={option.value}
-                onClick={() => setCardSize(option.value)}
-              >
-                <MenuCheck checked={cardSize === option.value} />
-                {option.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuGroup>
+        <DropdownMenuContent
+          align="end"
+          className="w-64 p-3"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span>Ширина картки</span>
+              <span className="tabular-nums text-muted-foreground">
+                {cardSize} px
+              </span>
+            </div>
+            <input
+              type="range"
+              min={CARD_WIDTH_MIN}
+              max={CARD_WIDTH_MAX}
+              step={CARD_WIDTH_STEP}
+              value={cardSize}
+              onChange={(event) => setCardSize(Number(event.target.value))}
+              className="h-2 w-full cursor-pointer accent-primary"
+              aria-label="Ширина картки в пікселях"
+            />
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={CARD_WIDTH_MIN}
+                max={CARD_WIDTH_MAX}
+                step={CARD_WIDTH_STEP}
+                value={cardSize}
+                onChange={(event) => {
+                  const value = event.target.valueAsNumber;
+                  if (Number.isFinite(value)) setCardSize(value);
+                }}
+                className="h-8 w-24 tabular-nums"
+                aria-label="Ширина картки"
+              />
+              <span className="text-xs text-muted-foreground">px</span>
+            </div>
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
 

@@ -230,10 +230,10 @@ test("store: импорт, переименование, перенос, уда�
 
   useAppStore.getState().setPageSize(100);
   useAppStore.getState().setPage(3);
-  useAppStore.getState().setCardSize("large");
+  useAppStore.getState().setCardSize(340);
   assert.equal(useAppStore.getState().page, 3);
   assert.equal(useAppStore.getState().pageSize, 100);
-  assert.equal(useAppStore.getState().cardSize, "large");
+  assert.equal(useAppStore.getState().cardSize, 340);
 
   useAppStore.getState().setCategoryFilter(categoryToSave);
   useAppStore.getState().setQuickFilter("singles");
@@ -251,7 +251,7 @@ test("store: импорт, переименование, перенос, уда�
   );
   assert.equal(state.filtersByDataset[String(datasetId)]?.sortBy, "title");
   assert.equal(state.filtersByDataset[String(datasetId)]?.pageSize, 100);
-  assert.equal(state.filtersByDataset[String(datasetId)]?.cardSize, "large");
+  assert.equal(state.filtersByDataset[String(datasetId)]?.cardSize, 340);
 
   await useAppStore.getState().switchDataset(datasetId);
   state = useAppStore.getState();
@@ -259,7 +259,7 @@ test("store: импорт, переименование, перенос, уда�
   assert.equal(state.quickFilter, "singles");
   assert.equal(state.sortBy, "title");
   assert.equal(state.pageSize, 100);
-  assert.equal(state.cardSize, "large");
+  assert.equal(state.cardSize, 340);
   assert.equal(state.page, 1);
 
   // Второй файл импортируется и удаляется без потери первого.

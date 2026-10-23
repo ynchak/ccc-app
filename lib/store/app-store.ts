@@ -49,9 +49,9 @@ import type {
   MergeSuggestion,
 } from "@/lib/jev/types";
 import {
-  DEFAULT_CARD_SIZE,
-  isCardSize,
-  type CardSize,
+  DEFAULT_CARD_WIDTH,
+  normalizeCardWidth,
+  type CardWidth,
 } from "@/lib/card-size";
 import {
   DEFAULT_PAGE_SIZE,
@@ -72,7 +72,7 @@ export interface DatasetFilters {
   quickFilter: QuickFilter;
   sortBy: SortBy;
   pageSize: PageSize;
-  cardSize: CardSize;
+  cardSize: CardWidth;
 }
 
 /** Настройки по умолчанию. */
@@ -81,7 +81,7 @@ const DEFAULT_FILTERS: DatasetFilters = {
   quickFilter: "all",
   sortBy: "category",
   pageSize: DEFAULT_PAGE_SIZE,
-  cardSize: DEFAULT_CARD_SIZE,
+  cardSize: DEFAULT_CARD_WIDTH,
 };
 
 /** Безопасное хранилище для SSR. */
@@ -140,7 +140,7 @@ interface AppState {
   page: number;
   pageSize: PageSize;
   /** Размер карточек товаров. */
-  cardSize: CardSize;
+  cardSize: CardWidth;
   selectedGroupIds: Set<number>;
   selectedProductIds: Set<number>;
   /** Пары групп, которые Jev предлагает объединить, но не делает это сам. */
@@ -166,7 +166,7 @@ interface AppState {
   setQuickFilter: (value: QuickFilter) => void;
   setPage: (value: number) => void;
   setPageSize: (value: PageSize) => void;
-  setCardSize: (value: CardSize) => void;
+  setCardSize: (value: CardWidth) => void;
   toggleGroupSelection: (groupId: number) => void;
   clearGroupSelection: () => void;
   toggleProductSelection: (productId: number) => void;
@@ -439,10 +439,7 @@ export const useAppStore = create<AppState>()(
       saved && isPageSize(saved.pageSize)
         ? saved.pageSize
         : DEFAULT_PAGE_SIZE;
-    const cardSize =
-      saved && isCardSize(saved.cardSize)
-        ? saved.cardSize
-        : DEFAULT_CARD_SIZE;
+    const cardSize = normalizeCardWidth(saved?.cardSize);
     return {
       ...DEFAULT_FILTERS,
       ...saved,
@@ -552,7 +549,7 @@ export const useAppStore = create<AppState>()(
     filtersByDataset: {},
     page: 1,
     pageSize: DEFAULT_PAGE_SIZE,
-    cardSize: DEFAULT_CARD_SIZE,
+    cardSize: DEFAULT_CARD_WIDTH,
     selectedGroupIds: new Set(),
     selectedProductIds: new Set(),
     mergeSuggestions: [],
@@ -764,7 +761,7 @@ export const useAppStore = create<AppState>()(
               productToGroup: new Map(),
               page: 1,
               pageSize: DEFAULT_PAGE_SIZE,
-              cardSize: DEFAULT_CARD_SIZE,
+              cardSize: DEFAULT_CARD_WIDTH,
               selectedGroupIds: new Set(),
               selectedProductIds: new Set(),
               mergeSuggestions: [],
@@ -840,10 +837,10 @@ export const useAppStore = create<AppState>()(
     },
 
     setCardSize(value) {
-      if (!isCardSize(value)) return;
+      const cardSize = normalizeCardWidth(value);
       set((state) => ({
-        cardSize: value,
-        filtersByDataset: withSavedFilters(state, { cardSize: value }),
+        cardSize,
+        filtersByDataset: withSavedFilters(state, { cardSize }),
       }));
     },
 

@@ -33,7 +33,7 @@ import {
   readDragIds,
   setDragIds,
 } from "@/lib/dnd";
-import { CARD_GRID_CLASSES } from "@/lib/card-size";
+import { cardGridStyle } from "@/lib/card-size";
 import { productsLabel } from "@/lib/plural";
 import { normalizeTitle } from "@/lib/grouping/cluster";
 import {
@@ -393,7 +393,7 @@ export const GroupSection = memo(function GroupSection({
         {isOpen ? (
           <CardContent id={`group-content-${group.id}`} className="py-3">
             {products.length > 0 ? (
-              <div className={`grid ${CARD_GRID_CLASSES[cardSize]}`}>
+              <div className="grid gap-3" style={cardGridStyle(cardSize)}>
                 {products.map((product) => (
                   <ProductCard
                     key={product.id}

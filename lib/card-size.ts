@@ -1,26 +1,47 @@
-/** Варианты размера карточек товаров. */
-export const CARD_SIZE_OPTIONS = [
-  { value: "small", label: "Маленькі" },
-  { value: "medium", label: "Середні" },
-  { value: "large", label: "Великі" },
-] as const;
+import type { CSSProperties } from "react";
 
-export type CardSize = (typeof CARD_SIZE_OPTIONS)[number]["value"];
+/** Допустимая ширина карточки товара в пикселях. */
+export const CARD_WIDTH_MIN = 140;
+export const CARD_WIDTH_MAX = 400;
+export const CARD_WIDTH_STEP = 10;
+export const DEFAULT_CARD_WIDTH = 240;
 
-/** Размер карточек по умолчанию. */
-export const DEFAULT_CARD_SIZE: CardSize = "medium";
+export type CardWidth = number;
 
-/** Проверяет, что значение является допустимым размером карточек. */
-export function isCardSize(value: unknown): value is CardSize {
-  return CARD_SIZE_OPTIONS.some((option) => option.value === value);
+const LEGACY_WIDTHS: Record<string, number> = {
+  small: 180,
+  medium: DEFAULT_CARD_WIDTH,
+  large: 340,
+};
+
+/** Приводит сохранённое значение к допустимой ширине с шагом 10 px. */
+export function normalizeCardWidth(value: unknown): CardWidth {
+  if (typeof value === "string" && value in LEGACY_WIDTHS) {
+    return LEGACY_WIDTHS[value];
+  }
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) return DEFAULT_CARD_WIDTH;
+  const clamped = Math.min(
+    CARD_WIDTH_MAX,
+    Math.max(CARD_WIDTH_MIN, numeric),
+  );
+  return Math.round(clamped / CARD_WIDTH_STEP) * CARD_WIDTH_STEP;
 }
 
-/** CSS-классы сетки для выбранного размера карточек. */
-export const CARD_GRID_CLASSES: Record<CardSize, string> = {
-  small:
-    "grid-cols-2 gap-2 min-[480px]:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6",
-  medium:
-    "grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4",
-  large:
-    "grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3",
-};
+/** Проверяет, что значение является допустимой шириной карточки. */
+export function isCardWidth(value: unknown): value is CardWidth {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= CARD_WIDTH_MIN &&
+    value <= CARD_WIDTH_MAX &&
+    value % CARD_WIDTH_STEP === 0
+  );
+}
+
+/** CSS-сетка карточек с выбранной шириной. */
+export function cardGridStyle(width: CardWidth): CSSProperties {
+  return {
+    gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${width}px), 1fr))`,
+  };
+}
