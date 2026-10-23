@@ -61,11 +61,9 @@ export const GroupSection = memo(function GroupSection({
   onDetailsProduct: (product: Product) => void;
 }) {
   const products = useGroupProducts(group);
-  const productSort = group.productSort ?? "color";
   const isSelected = useAppStore((s) => s.selectedGroupIds.has(group.id));
   const cardSize = useAppStore((s) => s.cardSize);
   const toggleGroupSelection = useAppStore((s) => s.toggleGroupSelection);
-  const setGroupProductSort = useAppStore((s) => s.setGroupProductSort);
   const renameGroup = useAppStore((s) => s.renameGroup);
   const mergeGroups = useAppStore((s) => s.mergeGroups);
   const moveProducts = useAppStore((s) => s.moveProducts);
@@ -394,28 +392,6 @@ export const GroupSection = memo(function GroupSection({
 
         {isOpen ? (
           <CardContent id={`group-content-${group.id}`} className="py-3">
-            {products.length > 1 ? (
-              <div className="mb-3 flex flex-wrap items-center gap-1 text-xs">
-                <span className="mr-1 text-muted-foreground">Товари:</span>
-                <Button
-                  variant={productSort === "order" ? "secondary" : "ghost"}
-                  size="xs"
-                  aria-pressed={productSort === "order"}
-                  onClick={() => void setGroupProductSort(group.id, "order")}
-                >
-                  За порядком
-                </Button>
-                <Button
-                  variant={productSort === "color" ? "secondary" : "ghost"}
-                  size="xs"
-                  aria-pressed={productSort === "color"}
-                  onClick={() => void setGroupProductSort(group.id, "color")}
-                >
-                  За кольором
-                </Button>
-              </div>
-            ) : null}
-
             {products.length > 0 ? (
               <div className="grid gap-3" style={cardGridStyle(cardSize)}>
                 {products.map((product) => (

@@ -39,7 +39,7 @@ test("товари сортуються за кольором, порожній 
     product(4, "Сірий"),
   ];
   assert.deepEqual(
-    sortGroupProducts(products, "color").map((item) => item.id),
+    sortGroupProducts(products).map((item) => item.id),
     [3, 4, 1, 2],
   );
 });
@@ -51,19 +51,22 @@ test("усередині кольору зберігається вихідни�
     product(3, "Сірий", 20),
   ];
   assert.deepEqual(
-    sortGroupProducts(products, "color").map((item) => item.id),
+    sortGroupProducts(products).map((item) => item.id),
     [2, 3, 1],
   );
 });
 
-test("режим за порядком повертає вихідний порядок", () => {
+test("якщо кольору немає, товари сортуються за назвою", () => {
   const products = [
-    product(1, "Сірий", 30),
-    product(2, "Чорний", 10),
-    product(3, "Бежевий", 20),
+    product(1, null, 30),
+    product(2, null, 10),
+    product(3, null, 20),
   ];
+  products[0].goodsTitle = "Яблуко";
+  products[1].goodsTitle = "Апельсин";
+  products[2].goodsTitle = "Банан";
   assert.deepEqual(
-    sortGroupProducts(products, "order").map((item) => item.id),
+    sortGroupProducts(products).map((item) => item.id),
     [2, 3, 1],
   );
 });

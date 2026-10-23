@@ -37,9 +37,6 @@ export interface Product {
 
 export type TitleSource = "derived" | "manual" | "llm";
 
-/** Порядок товаров внутри группы. */
-export type ProductSort = "order" | "color";
-
 /** Группа товаров. */
 export interface Group {
   id: number;
@@ -63,8 +60,6 @@ export interface Group {
 
   /** Группа изменена вручную: авто-объединение её не трогает. */
   manual?: boolean;
-  /** Порядок товаров внутри группы. */
-  productSort?: ProductSort;
 }
 
 /** Импортированный файл. */
