@@ -25,6 +25,6 @@ test("ширина карточки округляется до шага 10 и �
 test("сетка использует выбранную ширину", () => {
   assert.deepEqual(cardGridStyle(250), {
     gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 250px), 250px))",
-    justifyContent: "center",
+    justifyContent: "start",
   });
 });

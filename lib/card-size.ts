@@ -43,6 +43,6 @@ export function isCardWidth(value: unknown): value is CardWidth {
 export function cardGridStyle(width: CardWidth): CSSProperties {
   return {
     gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${width}px), ${width}px))`,
-    justifyContent: "center",
+    justifyContent: "start",
   };
 }
