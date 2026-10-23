@@ -75,6 +75,8 @@ export function GroupHeaderControls({
   canUndo,
   onCleanTitles,
   isCleaning,
+  cleanupRunsLeft,
+  cleanupLimitReached,
   suggestionCount,
   onOpenSuggestions,
 }: {
@@ -84,6 +86,8 @@ export function GroupHeaderControls({
   canUndo: boolean;
   onCleanTitles: () => void;
   isCleaning: boolean;
+  cleanupRunsLeft: number;
+  cleanupLimitReached: boolean;
   suggestionCount: number;
   onOpenSuggestions: () => void;
 }) {
@@ -264,12 +268,18 @@ export function GroupHeaderControls({
         variant="outline"
         size="icon"
         onClick={onCleanTitles}
-        disabled={isCleaning}
-        aria-label="Очистити назви та перевірити моделі ШІ"
+        disabled={isCleaning || cleanupLimitReached}
+        aria-label={
+          cleanupLimitReached
+            ? "Ліміт очищення вичерпано"
+            : `Очистити назви та перевірити моделі ШІ. Залишилось запусків: ${cleanupRunsLeft}`
+        }
         title={
-          isCleaning
-            ? "Очищення назв і перевірка моделей…"
-            : "Очистити назви та перевірити моделі ШІ"
+          cleanupLimitReached
+            ? "Ліміт ручних очищень вичерпано (2/2)"
+            : isCleaning
+              ? "Очищення назв і перевірка моделей…"
+              : `Очистити назви та перевірити моделі ШІ. Залишилось запусків: ${cleanupRunsLeft}`
         }
       >
         <HugeiconsIcon

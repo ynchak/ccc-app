@@ -22,6 +22,7 @@ import {
   saveDataset,
   setSetting,
   updateDatasetAiCost,
+  updateDatasetCleanupRuns,
   updateDatasetCounts,
 } from "@/lib/db/idb";
 import {
@@ -42,6 +43,7 @@ import {
 } from "@/lib/llm/title-cleanup";
 import { applySuggestedColors } from "@/lib/llm/color-suggestions";
 import { usageCost } from "@/lib/ai-cost";
+import { MAX_AI_CLEANUP_RUNS } from "@/lib/ai-limits";
 import { retryTransient } from "@/lib/retry";
 import {
   JevNotConfiguredError,
@@ -207,6 +209,7 @@ interface AppState {
     onProgress?: (done: number, total: number) => void,
     options?: {
       suggestColors?: boolean;
+      countRun?: boolean;
       onModelProgress?: (done: number, total: number) => void;
     },
   ) => Promise<CleanupRunResult>;
@@ -1251,6 +1254,18 @@ export const useAppStore = create<AppState>()(
         };
       }
 
+      if (options?.countRun) {
+        const dataset = get().datasets.find(
+          (item) => item.id === datasetId,
+        );
+        const used = dataset?.aiCleanupRuns ?? 0;
+        if (used >= MAX_AI_CLEANUP_RUNS) {
+          throw new Error(
+            "Ліміт ручних очищень для цього файлу вичерпано.",
+          );
+        }
+      }
+
       set({ isLoading: true });
       try {
         let status;
@@ -1289,6 +1304,22 @@ export const useAppStore = create<AppState>()(
             jevFailed: false,
             skipped: true,
           };
+        }
+
+        if (options?.countRun && datasetId !== null) {
+          const dataset = get().datasets.find(
+            (item) => item.id === datasetId,
+          );
+          const used = dataset?.aiCleanupRuns ?? 0;
+          const nextRuns = used + 1;
+          await updateDatasetCleanupRuns(datasetId, nextRuns);
+          set({
+            datasets: get().datasets.map((item) =>
+              item.id === datasetId
+                ? { ...item, aiCleanupRuns: nextRuns }
+                : item,
+            ),
+          });
         }
 
         const inputs: CleanTitleInput[] = candidates.map((group) => {

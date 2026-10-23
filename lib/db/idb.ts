@@ -224,6 +224,17 @@ export async function updateDatasetCounts(
 }
 
 /** Переименовывает датасет. */
+/** Сохраняет количество ручных запусков очистки для файла. */
+export async function updateDatasetCleanupRuns(
+  datasetId: number,
+  runs: number,
+): Promise<void> {
+  const db = await getDb();
+  const dataset = await db.get("datasets", datasetId);
+  if (!dataset) return;
+  await db.put("datasets", { ...dataset, aiCleanupRuns: runs });
+}
+
 /** Увеличивает сохранённую стоимость ИИ для файла. */
 export async function updateDatasetAiCost(
   datasetId: number,

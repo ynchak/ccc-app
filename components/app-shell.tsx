@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/empty";
 import { PRODUCT_DRAG_TYPE, hasDragType, readDragIds } from "@/lib/dnd";
 import { formatUsd } from "@/lib/ai-cost";
+import { MAX_AI_CLEANUP_RUNS } from "@/lib/ai-limits";
 import { exportXlsx } from "@/lib/export/xlsx";
 import { paginate } from "@/lib/pagination";
 import { groupsLabel, productsLabel } from "@/lib/plural";
@@ -191,6 +192,12 @@ export function AppShell() {
   }, [undo]);
 
   const activeDataset = datasets.find((d) => d.id === activeDatasetId) ?? null;
+  const cleanupRunsUsed = activeDataset?.aiCleanupRuns ?? 0;
+  const cleanupRunsLeft = Math.max(
+    0,
+    MAX_AI_CLEANUP_RUNS - cleanupRunsUsed,
+  );
+  const cleanupLimitReached = cleanupRunsLeft === 0;
 
   const exportIssues = useMemo(() => {
     const issues: string[] = [];
@@ -268,9 +275,13 @@ export function AppShell() {
 
   const handleCleanTitles = async () => {
     if (isCleaningTitles) return;
+    if (cleanupLimitReached) {
+      notify("Ліміт ручних очищень для цього файлу вичерпано.", "error");
+      return;
+    }
     setIsCleaningTitles(true);
     try {
-      const result = await cleanTitlesWithLlm();
+      const result = await cleanTitlesWithLlm(undefined, { countRun: true });
       if (result.total === 0) {
         notify("Немає автоматичних груп для очищення");
       } else if (result.skipped) {
@@ -295,11 +306,13 @@ export function AppShell() {
         ].filter(Boolean);
         const message =
           parts.length > 0 ? parts.join(", ") : "Змін немає";
+        const lastRunNote =
+          cleanupRunsLeft === 1 ? " Це був останній запуск." : "";
         const hasProblem = result.failed > 0 || result.jevFailed;
         notify(
           result.jevFailed
-            ? `${message}. Jev не зміг перевірити моделі.`
-            : message,
+            ? `${message}. Jev не зміг перевірити моделі.${lastRunNote}`
+            : `${message}.${lastRunNote}`,
           hasProblem ? "error" : "success",
         );
       }
@@ -415,6 +428,8 @@ export function AppShell() {
                   canUndo={undoStack.length > 0}
                   onCleanTitles={() => void handleCleanTitles()}
                   isCleaning={isCleaningTitles}
+                  cleanupRunsLeft={cleanupRunsLeft}
+                  cleanupLimitReached={cleanupLimitReached}
                   suggestionCount={mergeSuggestions.length}
                   onOpenSuggestions={() => setSuggestionsOpen(true)}
                 />
