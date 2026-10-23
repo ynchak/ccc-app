@@ -15,7 +15,7 @@ import {
   UnfoldMoreIcon,
 } from "@hugeicons/core-free-icons";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PRODUCT_DRAG_TYPE, setDragIds } from "@/lib/dnd";
+import { gomerProductUrl, rozetkaProductUrl } from "@/lib/product-links";
 import { useAppStore } from "@/lib/store/app-store";
 import type { Product } from "@/lib/types";
 
@@ -52,6 +53,8 @@ export const ProductCard = memo(function ProductCard({
   const safeIndex = images.length > 0 ? imageIndex % images.length : 0;
   const currentImage = images[safeIndex];
   const imageFailed = currentImage ? failedImages.has(currentImage) : false;
+  const gomerUrl = gomerProductUrl(product);
+  const rozetkaUrl = rozetkaProductUrl(product.goodsId);
 
   const handleDragStart = (event: DragEvent<HTMLButtonElement>) => {
     const state = useAppStore.getState();
@@ -241,6 +244,22 @@ export const ProductCard = memo(function ProductCard({
         </button>
 
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-md border bg-muted/30 px-2.5 py-2 text-xs">
+          <dt className="text-muted-foreground">Бренд</dt>
+          <dd
+            className="truncate text-foreground"
+            title={product.producersTitle || "—"}
+          >
+            {product.producersTitle || "—"}
+          </dd>
+
+          <dt className="text-muted-foreground">Продавец</dt>
+          <dd
+            className="truncate text-foreground"
+            title={product.sellerTitle || "—"}
+          >
+            {product.sellerTitle || "—"}
+          </dd>
+
           <dt className="text-muted-foreground">Размер</dt>
           <dd className="truncate text-foreground" title={product.size ?? "—"}>
             {product.size || "—"}
@@ -266,12 +285,54 @@ export const ProductCard = memo(function ProductCard({
 
         {product.goodsArticle ? (
           <p
-            className="mt-auto truncate text-[11px] text-muted-foreground/70"
+            className="truncate text-[11px] text-muted-foreground/70"
             title={product.goodsArticle}
           >
             {product.goodsArticle}
           </p>
         ) : null}
+
+        <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
+          {gomerUrl ? (
+            <a
+              href={gomerUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={`${buttonVariants({
+                variant: "outline",
+                size: "xs",
+              })} text-muted-foreground hover:text-foreground`}
+              title="Открыть товар в Gomer"
+            >
+              Gomer
+            </a>
+          ) : (
+            <span
+              className={`${buttonVariants({
+                variant: "outline",
+                size: "xs",
+              })} cursor-default text-muted-foreground/50`}
+              title="Нет gomer_sync_source_id"
+            >
+              Gomer
+            </span>
+          )}
+
+          {rozetkaUrl ? (
+            <a
+              href={rozetkaUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={`${buttonVariants({
+                variant: "outline",
+                size: "xs",
+              })} text-muted-foreground hover:text-foreground`}
+              title="Открыть товар на Rozetka"
+            >
+              RZ
+            </a>
+          ) : null}
+        </div>
       </div>
     </div>
   );
