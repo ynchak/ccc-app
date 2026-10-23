@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import {
   applyModelResults,
+  normalizeTitleAfterLlm,
   normalizeTitleBeforeLlm,
   tokenizeTitle,
   type CleanTitleInput,
@@ -251,4 +252,20 @@ test("назви, що відрізняються лише словом розм
   const a = normalizeTitleBeforeLlm("Боді шоколад розмір M HDSYR_839");
   const b = normalizeTitleBeforeLlm("Боді шоколад S HDSYR_839");
   assert.equal(a.replace(" M ", " "), b.replace(" S ", " "));
+});
+
+test("після LLM прибираються одиночні дужки", () => {
+  assert.equal(
+    normalizeTitleAfterLlm("Товар (HDSYR_839"),
+    "Товар HDSYR_839",
+  );
+  assert.equal(
+    normalizeTitleAfterLlm("Товар HDSYR_839)"),
+    "Товар HDSYR_839",
+  );
+  assert.equal(
+    normalizeTitleAfterLlm("Товар (HDSYR_839)"),
+    "Товар (HDSYR_839)",
+  );
+  assert.equal(normalizeTitleAfterLlm("Товар ()"), "Товар");
 });

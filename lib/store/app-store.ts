@@ -37,6 +37,7 @@ import {
   fetchCleanupStatus,
 } from "@/lib/llm/client";
 import {
+  normalizeTitleAfterLlm,
   normalizeTitleBeforeLlm,
   type CleanTitleInput,
   type CleanTitleResult,
@@ -1479,7 +1480,9 @@ export const useAppStore = create<AppState>()(
         for (const group of candidates) {
           const result = results.get(String(group.id));
           const title = result
-            ? normalizeTitleBeforeLlm(result.title.trim())
+            ? normalizeTitleAfterLlm(
+                normalizeTitleBeforeLlm(result.title.trim()),
+              )
             : "";
           if (!title || title === group.title) continue;
           next.set(group.id, {

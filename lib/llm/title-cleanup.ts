@@ -121,6 +121,60 @@ function findSizeAnchor(tokens: string[], size?: string): number | null {
   return null;
 }
 
+const OPEN_BRACKETS = new Map([
+  ["(", ")"],
+  ["[", "]"],
+  ["{", "}"],
+]);
+const CLOSE_BRACKETS = new Map([
+  [")", "("],
+  ["]", "["],
+  ["}", "{"],
+]);
+
+/**
+ * Убирает одиночные открывающие/закрывающие скобки.
+ *
+ * Парные скобки сохраняются, например артикул в `(HDSYR_839)`.
+ */
+export function normalizeTitleAfterLlm(value: string): string {
+  const stack: Array<{ close: string; index: number }> = [];
+  const remove = new Set<number>();
+
+  for (let index = 0; index < value.length; index++) {
+    const char = value[index];
+    const close = OPEN_BRACKETS.get(char);
+    if (close) {
+      stack.push({ close, index });
+      continue;
+    }
+
+    const open = CLOSE_BRACKETS.get(char);
+    if (!open) continue;
+
+    const last = stack[stack.length - 1];
+    if (last && last.close === char) {
+      stack.pop();
+    } else {
+      remove.add(index);
+    }
+  }
+
+  for (const item of stack) remove.add(item.index);
+
+  let result = "";
+  for (let index = 0; index < value.length; index++) {
+    if (!remove.has(index)) result += value[index];
+  }
+
+  return result
+    .replace(/[([{]\s*[)\]}]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/^[\s,;:]+|[\s,;:]+$/g, "")
+    .trim();
+}
+
 /** Применяет разметку модели: labels -> очищенное название. */
 export function applyModelResults(
   inputs: CleanTitleInput[],
@@ -179,13 +233,11 @@ export function applyModelResults(
     }
 
     const removedTokens = tokens.filter((_, index) => remove.has(index));
-    const cleaned = tokens
-      .filter((_, index) => !remove.has(index))
-      .join(" ")
-      .replace(/\s+/g, " ")
-      .replace(/\s+([,.;:!?])/g, "$1")
-      .replace(/\(\s*\)/g, "")
-      .trim();
+    const cleaned = normalizeTitleAfterLlm(
+      tokens
+        .filter((_, index) => !remove.has(index))
+        .join(" "),
+    );
 
     const safeCleaned =
       cleaned.length >= 2 && /[\p{L}\p{N}]/u.test(cleaned)
