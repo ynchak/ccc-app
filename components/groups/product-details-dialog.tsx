@@ -5,7 +5,6 @@ import {
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
-  type WheelEvent as ReactWheelEvent,
 } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
@@ -56,6 +55,7 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
     originX: number;
     originY: number;
   } | null>(null);
+  const dragMovedRef = useRef(false);
 
   const safeIndex = images.length > 0 ? imageIndex % images.length : 0;
   const currentImage = images[safeIndex];
@@ -99,12 +99,8 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
     });
   };
 
-  const handleWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setZoomLevel(zoom + (event.deltaY < 0 ? 0.25 : -0.25));
-  };
-
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    dragMovedRef.current = false;
     if (zoom <= 1) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     dragRef.current = {
@@ -118,10 +114,10 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (!drag) return;
-    setPan({
-      x: drag.originX + event.clientX - drag.startX,
-      y: drag.originY + event.clientY - drag.startY,
-    });
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragMovedRef.current = true;
+    setPan({ x: drag.originX + dx, y: drag.originY + dy });
   };
 
   const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -129,6 +125,15 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
+  };
+
+  const handleImageClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+    if (dragMovedRef.current) {
+      dragMovedRef.current = false;
+      return;
+    }
+    setZoomLevel(zoom + 0.5);
   };
 
   useEffect(() => {
@@ -233,15 +238,11 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
                 className={`relative h-[90vh] w-[90vw] touch-none overflow-hidden ${
                   zoom > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"
                 }`}
-                onClick={(event) => event.stopPropagation()}
-                onWheel={handleWheel}
+                onClick={handleImageClick}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
-                onDoubleClick={() =>
-                  zoom > 1 ? resetZoom() : setZoomLevel(2)
-                }
               >
                 <div
                   className="relative h-full w-full"
@@ -307,15 +308,9 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
                 <span className="min-w-12 text-center text-xs tabular-nums">
                   {Math.round(zoom * 100)}%
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setZoomLevel(zoom + 0.5)}
-                  disabled={zoom >= 4}
-                  className="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/15 disabled:opacity-40"
-                  aria-label="Увеличить"
-                >
-                  <HugeiconsIcon icon={ZoomInAreaIcon} className="size-4" />
-                </button>
+                <span className="px-1 text-[11px] text-white/60">
+                  клик — увеличить
+                </span>
                 <button
                   type="button"
                   onClick={resetZoom}
