@@ -41,7 +41,7 @@ const group = (overrides: Partial<Group>): Group => ({
   ...overrides,
 });
 
-test("экспорт сохраняет порядок товаров и подставляет группу", () => {
+test("экспорт сортирует строки по группе и подставляет группу", () => {
   const products = [
     product({ id: 1, order: 1, goodsId: "2", goodsTitle: "Второй" }),
     product({ id: 2, order: 0, goodsId: "1", goodsTitle: "Первый" }),
@@ -58,18 +58,42 @@ test("экспорт сохраняет порядок товаров и под�
   const rows = buildExportRows(products, groups, productToGroup);
   assert.deepEqual(rows, [
     {
-      id: "1",
-      goodsTitle: "Первый",
-      categoryTitle: "Категория",
-      groupTitle: "Группа B",
-    },
-    {
       id: "2",
       goodsTitle: "Второй",
       categoryTitle: "Категория",
       groupTitle: "Группа A",
     },
+    {
+      id: "1",
+      goodsTitle: "Первый",
+      categoryTitle: "Категория",
+      groupTitle: "Группа B",
+    },
   ]);
+});
+
+test("внутри группы сохраняется исходный порядок, без группы — в конце", () => {
+  const products = [
+    product({ id: 1, order: 2, goodsId: "3", goodsTitle: "Третий" }),
+    product({ id: 2, order: 0, goodsId: "1", goodsTitle: "Первый" }),
+    product({ id: 3, order: 1, goodsId: "2", goodsTitle: "Второй" }),
+    product({ id: 4, order: 3, goodsId: "4", goodsTitle: "Без группы" }),
+  ];
+  const groups = [
+    group({ id: 10, title: "Группа A", productIds: [1, 2] }),
+    group({ id: 11, title: "Группа B", productIds: [3] }),
+  ];
+  const productToGroup = new Map([
+    [1, 10],
+    [2, 10],
+    [3, 11],
+  ]);
+
+  const rows = buildExportRows(products, groups, productToGroup);
+  assert.deepEqual(
+    rows.map((row) => row.id),
+    ["1", "3", "2", "4"],
+  );
 });
 
 test("товар без группы экспортируется с пустой группой", () => {
