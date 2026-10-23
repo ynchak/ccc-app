@@ -50,7 +50,12 @@ export async function fetchCleanupStatus(): Promise<CleanupStatus> {
 /** Очищает батч названий групп через сервер. */
 export async function cleanTitlesBatch(
   items: CleanTitleInput[],
-): Promise<{ results: CleanTitleResult[]; model: string; promptVersion: string }> {
+): Promise<{
+  results: CleanTitleResult[];
+  model: string;
+  promptVersion: string;
+  usage: unknown;
+}> {
   const response = await fetch("/api/clean-titles", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -72,5 +77,6 @@ export async function cleanTitlesBatch(
     results: CleanTitleResult[];
     model: string;
     promptVersion: string;
+    usage: unknown;
   };
 }

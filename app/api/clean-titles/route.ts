@@ -155,6 +155,8 @@ export async function POST(request: NextRequest) {
   }
 
   const payload: unknown = await response.json();
+  const payloadRecord = payload as { usage?: unknown } | null;
+  const usage = payloadRecord?.usage ?? null;
   let content: unknown;
   try {
     const record = payload as {
@@ -212,7 +214,7 @@ export async function POST(request: NextRequest) {
 
   const results = applyModelResults(items, modelResults);
   return NextResponse.json(
-    { results, model, promptVersion: CLEANUP_PROMPT_VERSION },
+    { results, model, promptVersion: CLEANUP_PROMPT_VERSION, usage },
     { headers: { "cache-control": "no-store" } },
   );
 }

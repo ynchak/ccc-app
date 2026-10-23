@@ -51,6 +51,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { PRODUCT_DRAG_TYPE, hasDragType, readDragIds } from "@/lib/dnd";
+import { formatUsd } from "@/lib/ai-cost";
 import { exportXlsx } from "@/lib/export/xlsx";
 import { paginate } from "@/lib/pagination";
 import { groupsLabel, productsLabel } from "@/lib/plural";
@@ -281,6 +282,12 @@ export function AppShell() {
           result.modelMerged > 0
             ? `об’єднано за моделлю: ${result.modelMerged}`
             : null,
+          result.colorsSuggested > 0
+            ? `додано кольорів: ${result.colorsSuggested}`
+            : null,
+          result.costUsd > 0
+            ? `витрати ШІ: ${formatUsd(result.costUsd)}`
+            : null,
           result.suggestions.length > 0
             ? `пропозицій: ${result.suggestions.length}`
             : null,
@@ -424,6 +431,14 @@ export function AppShell() {
                     className="size-3.5"
                   />
                   Збережено
+                </span>
+              ) : null}
+              {activeDataset?.aiCostUsd && activeDataset.aiCostUsd > 0 ? (
+                <span
+                  className="hidden rounded-md border px-1.5 py-0.5 text-[11px] text-muted-foreground sm:inline-flex"
+                  title="Витрати на запити ШІ для цього файлу"
+                >
+                  AI {formatUsd(activeDataset.aiCostUsd)}
                 </span>
               ) : null}
               <Button

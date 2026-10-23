@@ -20,6 +20,7 @@ import {
   renameDataset as dbRenameDataset,
   saveDataset,
   setSetting,
+  updateDatasetAiCost,
   updateDatasetCounts,
 } from "@/lib/db/idb";
 import {
@@ -35,6 +36,7 @@ import {
 } from "@/lib/llm/client";
 import type { CleanTitleInput, CleanTitleResult } from "@/lib/llm/title-cleanup";
 import { applySuggestedColors } from "@/lib/llm/color-suggestions";
+import { usageCost } from "@/lib/ai-cost";
 import {
   JevNotConfiguredError,
   JevRequestError,
@@ -107,6 +109,8 @@ export interface CleanupRunResult {
   modelMerged: number;
   /** Сколько товаров получили предложенный цвет. */
   colorsSuggested: number;
+  /** Стоимость запросов ИИ за этот запуск, USD. */
+  costUsd: number;
   /** Пары, которые Jev считает вероятными, но не автоматическими. */
   suggestions: MergeSuggestion[];
   failed: number;
@@ -1214,6 +1218,7 @@ export const useAppStore = create<AppState>()(
           merged: 0,
           modelMerged: 0,
           colorsSuggested: 0,
+          costUsd: 0,
           suggestions: [],
           failed: 0,
           jevSkipped: false,
@@ -1235,6 +1240,7 @@ export const useAppStore = create<AppState>()(
               merged: 0,
               modelMerged: 0,
               colorsSuggested: 0,
+              costUsd: 0,
               suggestions: [],
               failed: 0,
               jevSkipped: true,
@@ -1252,6 +1258,7 @@ export const useAppStore = create<AppState>()(
             merged: 0,
             modelMerged: 0,
             colorsSuggested: 0,
+            costUsd: 0,
             suggestions: [],
             failed: 0,
             jevSkipped: true,
@@ -1274,6 +1281,7 @@ export const useAppStore = create<AppState>()(
           };
         });
 
+        let costUsd = 0;
         const results = new Map<string, CleanTitleResult>();
         const uncached: CleanTitleInput[] = [];
         for (const input of inputs) {
@@ -1319,6 +1327,7 @@ export const useAppStore = create<AppState>()(
                   throw error;
                 }
               }
+              costUsd += usageCost(data.usage);
               for (const result of data.results) {
                 results.set(result.id, result);
                 const input = batch.find((item) => item.id === result.id);
@@ -1342,6 +1351,7 @@ export const useAppStore = create<AppState>()(
             merged: 0,
             modelMerged: 0,
             colorsSuggested: 0,
+            costUsd: 0,
             suggestions: [],
             failed: 0,
             jevSkipped: true,
@@ -1372,6 +1382,7 @@ export const useAppStore = create<AppState>()(
             merged: 0,
             modelMerged: 0,
             colorsSuggested: 0,
+            costUsd: 0,
             suggestions: [],
             failed: 0,
             jevSkipped: true,
@@ -1388,6 +1399,7 @@ export const useAppStore = create<AppState>()(
             merged: 0,
             modelMerged: 0,
             colorsSuggested: 0,
+            costUsd: 0,
             suggestions: [],
             failed: total,
             jevSkipped: false,
@@ -1498,6 +1510,7 @@ export const useAppStore = create<AppState>()(
                         throw error;
                       }
                     }
+                    costUsd += usageCost(data.usage);
                     decisions.push(...data.results);
                   } catch (error) {
                     if (error instanceof JevNotConfiguredError) {
@@ -1525,6 +1538,7 @@ export const useAppStore = create<AppState>()(
                   merged: 0,
                   modelMerged: 0,
                   colorsSuggested: 0,
+                  costUsd: 0,
                   suggestions: [],
                   failed: total,
                   jevSkipped,
@@ -1565,7 +1579,21 @@ export const useAppStore = create<AppState>()(
               : "Назви очищено ШІ",
           );
         }
-        set({ mergeSuggestions: suggestions, products });
+        if (costUsd > 0 && datasetId !== null) {
+          await updateDatasetAiCost(datasetId, costUsd);
+        }
+        const datasets =
+          costUsd > 0 && datasetId !== null
+            ? get().datasets.map((dataset) =>
+                dataset.id === datasetId
+                  ? {
+                      ...dataset,
+                      aiCostUsd: (dataset.aiCostUsd ?? 0) + costUsd,
+                    }
+                  : dataset,
+              )
+            : get().datasets;
+        set({ mergeSuggestions: suggestions, products, datasets });
 
         return {
           total,
@@ -1573,6 +1601,7 @@ export const useAppStore = create<AppState>()(
           merged,
           modelMerged,
           colorsSuggested,
+          costUsd,
           suggestions,
           failed,
           jevSkipped,

@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { formatUsd } from "@/lib/ai-cost";
 import { groupsLabel, productsLabel } from "@/lib/plural";
 import { useAppStore } from "@/lib/store/app-store";
 import { notify } from "@/lib/store/toast-store";
@@ -218,6 +219,9 @@ export function AppSidebar({
                           <span className="text-xs text-muted-foreground">
                             {productsLabel(dataset.rowCount)} ·{" "}
                             {groupsLabel(dataset.groupCount)}
+                            {dataset.aiCostUsd && dataset.aiCostUsd > 0
+                              ? ` · AI ${formatUsd(dataset.aiCostUsd)}`
+                              : ""}
                           </span>
                           <span className="text-[11px] text-muted-foreground/70">
                             {formatDate(dataset.importedAt)}

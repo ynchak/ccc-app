@@ -224,6 +224,21 @@ export async function updateDatasetCounts(
 }
 
 /** Переименовывает датасет. */
+/** Увеличивает сохранённую стоимость ИИ для файла. */
+export async function updateDatasetAiCost(
+  datasetId: number,
+  costUsd: number,
+): Promise<void> {
+  if (!Number.isFinite(costUsd) || costUsd <= 0) return;
+  const db = await getDb();
+  const dataset = await db.get("datasets", datasetId);
+  if (!dataset) return;
+  await db.put("datasets", {
+    ...dataset,
+    aiCostUsd: (dataset.aiCostUsd ?? 0) + costUsd,
+  });
+}
+
 export async function renameDataset(
   datasetId: number,
   name: string,

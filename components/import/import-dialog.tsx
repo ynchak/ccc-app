@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { formatUsd } from "@/lib/ai-cost";
 import { useAppStore } from "@/lib/store/app-store";
 import { notify } from "@/lib/store/toast-store";
 
@@ -149,6 +150,9 @@ export function ImportDialog({
             : null,
           result.colorsSuggested > 0
             ? `додано кольорів: ${result.colorsSuggested}`
+            : null,
+          result.costUsd > 0
+            ? `витрати ШІ: ${formatUsd(result.costUsd)}`
             : null,
           result.suggestions.length > 0
             ? `пропозицій: ${result.suggestions.length}`

@@ -49,6 +49,7 @@ export async function matchPairsBatch(
   results: JevPairResult[];
   model: string;
   promptVersion: string;
+  usage: unknown;
 }> {
   const response = await fetch("/api/group-matches", {
     method: "POST",
@@ -71,5 +72,6 @@ export async function matchPairsBatch(
     results: JevPairResult[];
     model: string;
     promptVersion: string;
+    usage: unknown;
   };
 }
