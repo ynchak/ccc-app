@@ -27,10 +27,7 @@ const THEME_LABELS: Record<ThemeValue, string> = {
   dark: "Темна",
 };
 
-const THEME_SWATCHES: Record<"light" | "dark", { bg: string; fg: string }> = {
-  light: { bg: "#f7f6f3", fg: "#1c1b19" },
-  dark: { bg: "#12110f", fg: "#a8b5a2" },
-};
+
 
 const LIGHT_OLD_THEMES = new Set([
   "light",
@@ -146,19 +143,18 @@ export function ThemeSelect() {
                   <HugeiconsIcon icon={Tick02Icon} className="size-3.5" />
                 ) : null}
               </span>
-              {themeValue === "system" ? (
-                <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
-                  <HugeiconsIcon icon={ComputerIcon} className="size-3.5" />
-                </span>
-              ) : (
-                <span
-                  className="size-4 shrink-0 rounded-full border-2"
-                  style={{
-                    backgroundColor: THEME_SWATCHES[themeValue].bg,
-                    borderColor: THEME_SWATCHES[themeValue].fg,
-                  }}
+              <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
+                <HugeiconsIcon
+                  icon={
+                    themeValue === "system"
+                      ? ComputerIcon
+                      : themeValue === "light"
+                        ? Sun03Icon
+                        : Moon02Icon
+                  }
+                  className="size-3.5"
                 />
-              )}
+              </span>
               {THEME_LABELS[themeValue]}
             </DropdownMenuItem>
           ))}
