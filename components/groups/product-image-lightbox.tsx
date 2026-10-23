@@ -137,14 +137,14 @@ export function ProductImageLightbox({
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="Просмотр фото"
+      aria-label="Перегляд фото"
       onClick={onClose}
     >
       <button
         type="button"
         onClick={onClose}
         className="absolute top-4 right-4 z-20 flex size-9 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
-        aria-label="Закрыть просмотр"
+        aria-label="Закрити перегляд"
       >
         <HugeiconsIcon icon={Cancel01Icon} className="size-5" />
       </button>
@@ -180,7 +180,7 @@ export function ProductImageLightbox({
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-white/70">
             <HugeiconsIcon icon={ImageNotFound01Icon} className="size-8" />
-            Фото не загрузилось
+            Фото не завантажилося
           </div>
         )}
       </div>
@@ -194,7 +194,7 @@ export function ProductImageLightbox({
               showPrev();
             }}
             className="absolute top-1/2 left-4 z-20 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
-            aria-label="Предыдущее фото"
+            aria-label="Попереднє фото"
           >
             <HugeiconsIcon icon={ArrowLeft01Icon} className="size-5" />
           </button>
@@ -205,7 +205,7 @@ export function ProductImageLightbox({
               showNext();
             }}
             className="absolute top-1/2 right-4 z-20 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
-            aria-label="Следующее фото"
+            aria-label="Наступне фото"
           >
             <HugeiconsIcon icon={ArrowRight01Icon} className="size-5" />
           </button>
@@ -224,7 +224,7 @@ export function ProductImageLightbox({
           onClick={() => setZoomLevel(zoom - 0.5)}
           disabled={zoom <= 1}
           className="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/15 disabled:opacity-40"
-          aria-label="Уменьшить"
+          aria-label="Зменшити"
         >
           <HugeiconsIcon icon={ZoomOutIcon} className="size-4" />
         </button>
@@ -232,14 +232,14 @@ export function ProductImageLightbox({
           {Math.round(zoom * 100)}%
         </span>
         <span className="px-1 text-[11px] text-white/60">
-          клик — увеличить
+          клік — збільшити
         </span>
         <button
           type="button"
           onClick={resetZoom}
           disabled={zoom === 1 && pan.x === 0 && pan.y === 0}
           className="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/15 disabled:opacity-40"
-          aria-label="Сбросить масштаб"
+          aria-label="Скинути масштаб"
         >
           <HugeiconsIcon icon={Refresh01Icon} className="size-4" />
         </button>

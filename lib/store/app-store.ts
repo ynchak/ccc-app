@@ -317,7 +317,7 @@ function uniqueGroupTitle(
   categoryId: string,
   base: string,
 ): string {
-  const title = base.trim() || "Новая группа";
+  const title = base.trim() || "Нова група";
   const taken = new Set(
     [...groups.values()]
       .filter((group) => group.categoryId === categoryId)
@@ -902,7 +902,7 @@ export const useAppStore = create<AppState>()(
           titleSource: "manual",
           manual: true,
         });
-        await commit(state.groups, next, "Группа переименована");
+        await commit(state.groups, next, "Групу перейменовано");
         return true;
       }
 
@@ -933,8 +933,8 @@ export const useAppStore = create<AppState>()(
         state.groups,
         next,
         duplicates.length === 1
-          ? "Группы объединены"
-          : "Несколько групп объединены",
+          ? "Групи об’єднано"
+          : "Кілька груп об’єднано",
       );
       return true;
     },
@@ -977,7 +977,7 @@ export const useAppStore = create<AppState>()(
       await commit(
         state.groups,
         next,
-        sources.length === 1 ? "Группы объединены" : "Несколько групп объединены",
+        sources.length === 1 ? "Групи об’єднано" : "Кілька груп об’єднано",
       );
       return true;
     },
@@ -1027,7 +1027,7 @@ export const useAppStore = create<AppState>()(
 
       dropEmptiedGroups(next, state.groups, toGroupId);
       refreshDerivedTitles(next, state.products, new Set([toGroupId]));
-      await commit(state.groups, next, "Товары перенесены");
+      await commit(state.groups, next, "Товари переміщено");
       return true;
     },
 
@@ -1106,7 +1106,7 @@ export const useAppStore = create<AppState>()(
         order: maxOrder + 1,
       });
 
-      await commit(state.groups, next, "Создана новая группа");
+      await commit(state.groups, next, "Створено нову групу");
 
       // Показываем страницу, на которой оказалась новая группа.
       const updated = get();
@@ -1135,7 +1135,7 @@ export const useAppStore = create<AppState>()(
       await ensureOwnGroup(next, product, groupId);
       dropEmptiedGroups(next, state.groups, groupId);
       refreshDerivedTitles(next, state.products);
-      await commit(state.groups, next, "Товар вынесен в отдельную группу");
+      await commit(state.groups, next, "Товар винесено в окрему групу");
     },
 
     async detachProducts(productIds) {
@@ -1165,7 +1165,7 @@ export const useAppStore = create<AppState>()(
 
       dropEmptiedGroups(next, state.groups);
       refreshDerivedTitles(next, state.products);
-      await commit(state.groups, next, "Товары вынесены в отдельные группы");
+      await commit(state.groups, next, "Товари винесено в окремі групи");
       return true;
     },
 
@@ -1192,7 +1192,7 @@ export const useAppStore = create<AppState>()(
       }
       set({ selectedGroupIds, selectedProductIds });
 
-      await commit(state.groups, next, "Группа удалена");
+      await commit(state.groups, next, "Групу видалено");
     },
 
     async cleanTitlesWithLlm(onProgress) {
@@ -1531,8 +1531,8 @@ export const useAppStore = create<AppState>()(
             state.groups,
             next,
             modelMerged > 0
-              ? "Названия очищены, группы объединены по модели"
-              : "Названия очищены ИИ",
+              ? "Назви очищено, групи об’єднано за моделлю"
+              : "Назви очищено ШІ",
           );
         }
         set({ mergeSuggestions: suggestions });
@@ -1598,7 +1598,7 @@ export const useAppStore = create<AppState>()(
         dropEmptiedGroups(next, state.groups, groupId);
       }
 
-      await commit(state.groups, next, "Название группы восстановлено");
+      await commit(state.groups, next, "Назву групи відновлено");
       return true;
     },
 
@@ -1871,7 +1871,7 @@ export function useCategories() {
       else
         map.set(group.categoryId, {
           id: group.categoryId,
-          title: group.categoryTitle || "Без категории",
+          title: group.categoryTitle || "Без категорії",
           count: 1,
         });
     }

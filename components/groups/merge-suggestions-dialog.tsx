@@ -44,24 +44,24 @@ export function MergeSuggestionsDialog({
 
   const handleMerge = async (aId: number, bId: number) => {
     const ok = await applyMergeSuggestion(aId, bId);
-    if (ok) notify("Группы объединены", "success");
-    else notify("Не удалось объединить группы", "error");
+    if (ok) notify("Групи об’єднано", "success");
+    else notify("Не вдалося об’єднати групи", "error");
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] min-w-0 overflow-x-hidden overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Возможные объединения по модели</DialogTitle>
+          <DialogTitle>Можливі об’єднання за моделлю</DialogTitle>
           <DialogDescription className="break-words">
-            Jev нашёл пары с вероятностью 80–95%. Проверьте их вручную:
-            объединение можно отменить кнопкой «Отменить».
+            Jev знайшов пари з імовірністю 80–95%. Перевірте їх вручну:
+            об’єднання можна скасувати кнопкою «Скасувати».
           </DialogDescription>
         </DialogHeader>
 
         {visible.length === 0 ? (
           <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-            Предложений нет.
+            Пропозицій немає.
           </p>
         ) : (
           <div className="flex min-w-0 flex-col gap-3">
@@ -83,7 +83,7 @@ export function MergeSuggestionsDialog({
                       Один тип: <strong>{percent(suggestion.sameType)}</strong>
                     </span>
                     <span className="truncate">
-                      {a.categoryTitle || "Без категории"}
+                      {a.categoryTitle || "Без категорії"}
                     </span>
                   </div>
 
@@ -107,7 +107,7 @@ export function MergeSuggestionsDialog({
                   </div>
 
                   <p className="mt-2 text-xs text-muted-foreground">
-                    После объединения останется название группы № {target.number}.
+                    Після об’єднання залишиться назва групи № {target.number}.
                   </p>
 
                   <div className="mt-3 flex flex-wrap justify-end gap-2">
@@ -118,7 +118,7 @@ export function MergeSuggestionsDialog({
                         dismissMergeSuggestion(suggestion.aId, suggestion.bId)
                       }
                     >
-                      Пропустить
+                      Пропустити
                     </Button>
                     <Button
                       size="sm"
@@ -130,7 +130,7 @@ export function MergeSuggestionsDialog({
                         icon={GroupLayersIcon}
                         data-icon="inline-start"
                       />
-                      Объединить
+                      Об’єднати
                     </Button>
                   </div>
                 </div>
@@ -142,11 +142,11 @@ export function MergeSuggestionsDialog({
         <DialogFooter>
           {visible.length > 0 ? (
             <Button variant="ghost" onClick={clearMergeSuggestions}>
-              Пропустить все
+              Пропустити все
             </Button>
           ) : null}
           <DialogClose render={<Button variant="outline" />}>
-            Закрыть
+            Закрити
           </DialogClose>
         </DialogFooter>
       </DialogContent>

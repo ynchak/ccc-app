@@ -22,9 +22,9 @@ import {
 type ThemeValue = "system" | "light" | "dark";
 
 const THEME_LABELS: Record<ThemeValue, string> = {
-  system: "Системная",
-  light: "Светлая",
-  dark: "Тёмная",
+  system: "Системна",
+  light: "Світла",
+  dark: "Темна",
 };
 
 const THEME_SWATCHES: Record<"light" | "dark", { bg: string; fg: string }> = {

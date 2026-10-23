@@ -43,8 +43,8 @@ export function LoginForm() {
         const message =
           data && typeof data === "object" && "error" in data
             ? String((data as { error?: unknown }).error)
-            : "Не удалось войти";
-        setError(message || "Не удалось войти");
+            : "Не вдалося увійти";
+        setError(message || "Не вдалося увійти");
         return;
       }
 
@@ -55,7 +55,7 @@ export function LoginForm() {
       router.replace(redirectTo || "/");
       router.refresh();
     } catch {
-      setError("Нет связи с сервером. Попробуйте ещё раз.");
+      setError("Немає зв'язку з сервером. Спробуйте ще раз.");
     } finally {
       setIsSubmitting(false);
     }
@@ -64,9 +64,9 @@ export function LoginForm() {
   return (
     <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <h2 className="text-base font-semibold">Вход в приложение</h2>
+        <h2 className="text-base font-semibold">Вхід у застосунок</h2>
         <p className="text-sm text-muted-foreground">
-          Введите пароль, который вам передали.
+          Введіть пароль, який вам передали.
         </p>
       </div>
 
@@ -97,7 +97,7 @@ export function LoginForm() {
       ) : null}
 
       <Button type="submit" disabled={!password || isSubmitting}>
-        {isSubmitting ? "Проверяем…" : "Войти"}
+        {isSubmitting ? "Перевіряємо…" : "Увійти"}
         <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
       </Button>
     </form>

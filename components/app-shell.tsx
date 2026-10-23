@@ -53,6 +53,7 @@ import {
 import { PRODUCT_DRAG_TYPE, hasDragType, readDragIds } from "@/lib/dnd";
 import { exportXlsx } from "@/lib/export/xlsx";
 import { paginate } from "@/lib/pagination";
+import { groupsLabel, productsLabel } from "@/lib/plural";
 import {
   useAppStore,
   useVisibleGroups,
@@ -99,7 +100,7 @@ function NewGroupDropZone({
       }`}
     >
       <HugeiconsIcon icon={Add01Icon} className="size-4" />
-      Перетащите товары сюда, чтобы создать новую группу
+      Перетягніть товари сюди, щоб створити нову групу
     </div>
   );
 }
@@ -181,7 +182,7 @@ export function AppShell() {
       }
       event.preventDefault();
       void undo().then((ok) => {
-        if (ok) notify("Действие отменено");
+        if (ok) notify("Дію скасовано");
       });
     };
     window.addEventListener("keydown", handler);
@@ -197,7 +198,7 @@ export function AppShell() {
     );
     if (productsWithoutGroup.length > 0) {
       issues.push(
-        `Товаров без группы: ${productsWithoutGroup.length}. Они будут экспортированы с пустой группой.`,
+        `Товарів без групи: ${productsWithoutGroup.length}. Їх буде експортовано з порожньою групою.`,
       );
     }
 
@@ -205,7 +206,7 @@ export function AppShell() {
       (group) => !group.title.trim(),
     );
     if (emptyTitleGroups.length > 0) {
-      issues.push(`Групп с пустым названием: ${emptyTitleGroups.length}.`);
+      issues.push(`Груп із порожньою назвою: ${emptyTitleGroups.length}.`);
     }
 
     const titlesByCategory = new Map<string, Set<string>>();
@@ -219,7 +220,7 @@ export function AppShell() {
     ).length;
     if (duplicateAcrossCategories > 0) {
       issues.push(
-        `Названий, которые встречаются в разных категориях: ${duplicateAcrossCategories}.`,
+        `Назв, які трапляються в різних категоріях: ${duplicateAcrossCategories}.`,
       );
     }
 
@@ -236,9 +237,9 @@ export function AppShell() {
         productToGroup,
         activeDataset.name,
       );
-      notify("XLSX-файл сформирован", "success");
+      notify("XLSX-файл сформовано", "success");
     } catch {
-      notify("Не удалось сформировать XLSX", "error");
+      notify("Не вдалося сформувати XLSX", "error");
     } finally {
       setIsExporting(false);
     }
@@ -247,7 +248,7 @@ export function AppShell() {
   const handleExport = () => {
     if (!activeDataset) return;
     if (products.size === 0) {
-      notify("В файле нет товаров для экспорта", "error");
+      notify("У файлі немає товарів для експорту", "error");
       return;
     }
     if (exportIssues.length > 0) {
@@ -259,8 +260,8 @@ export function AppShell() {
 
   const handleUndo = () => {
     void undo().then((ok) => {
-      if (ok) notify("Действие отменено");
-      else notify("Отменять больше нечего");
+      if (ok) notify("Дію скасовано");
+      else notify("Більше немає що скасовувати");
     });
   };
 
@@ -270,27 +271,27 @@ export function AppShell() {
     try {
       const result = await cleanTitlesWithLlm();
       if (result.total === 0) {
-        notify("Нет автоматических групп для очистки");
+        notify("Немає автоматичних груп для очищення");
       } else if (result.skipped) {
-        notify("LLM не настроена — названия не изменены", "error");
+        notify("LLM не налаштована — назви не змінено", "error");
       } else {
         const parts = [
-          result.cleaned > 0 ? `очищено названий: ${result.cleaned}` : null,
-          result.merged > 0 ? `объединено по названию: ${result.merged}` : null,
+          result.cleaned > 0 ? `очищено назв: ${result.cleaned}` : null,
+          result.merged > 0 ? `об’єднано за назвою: ${result.merged}` : null,
           result.modelMerged > 0
-            ? `объединено по модели: ${result.modelMerged}`
+            ? `об’єднано за моделлю: ${result.modelMerged}`
             : null,
           result.suggestions.length > 0
-            ? `предложений: ${result.suggestions.length}`
+            ? `пропозицій: ${result.suggestions.length}`
             : null,
-          result.failed > 0 ? `не обработано: ${result.failed}` : null,
+          result.failed > 0 ? `не оброблено: ${result.failed}` : null,
         ].filter(Boolean);
         const message =
-          parts.length > 0 ? parts.join(", ") : "Изменений нет";
+          parts.length > 0 ? parts.join(", ") : "Змін немає";
         const hasProblem = result.failed > 0 || result.jevFailed;
         notify(
           result.jevFailed
-            ? `${message}. Jev не смог проверить модели.`
+            ? `${message}. Jev не зміг перевірити моделі.`
             : message,
           hasProblem ? "error" : "success",
         );
@@ -299,7 +300,7 @@ export function AppShell() {
       notify(
         caught instanceof Error
           ? caught.message
-          : "Не удалось очистить названия",
+          : "Не вдалося очистити назви",
         "error",
       );
     } finally {
@@ -312,10 +313,10 @@ export function AppShell() {
       ...useAppStore.getState().selectedProductIds,
     ]);
     if (groupId === null) {
-      notify("Не удалось создать группу: товары из разных категорий", "error");
+      notify("Не вдалося створити групу: товари з різних категорій", "error");
       return;
     }
-    notify("Товары сгруппированы", "success");
+    notify("Товари згруповано", "success");
   };
 
   const handleDetachSelected = async () => {
@@ -323,19 +324,19 @@ export function AppShell() {
       ...useAppStore.getState().selectedProductIds,
     ]);
     if (!ok) {
-      notify("Нечего выносить в отдельные группы");
+      notify("Немає що виносити в окремі групи");
       return;
     }
-    notify("Товары вынесены в отдельные группы", "success");
+    notify("Товари винесено в окремі групи", "success");
   };
 
   const handleDropNewGroup = async (productIds: number[]) => {
     const groupId = await createGroupFromProducts(productIds);
     if (groupId === null) {
-      notify("Нельзя объединить товары из разных категорий", "error");
+      notify("Не можна об’єднати товари з різних категорій", "error");
       return;
     }
-    notify("Товары сгруппированы", "success");
+    notify("Товари згруповано", "success");
   };
 
   const handleMergeGroup = useCallback((target: Group) => {
@@ -363,7 +364,7 @@ export function AppShell() {
               size="icon-sm"
               className="lg:hidden"
               onClick={() => setSidebarOpen(true)}
-              aria-label="Открыть список файлов"
+              aria-label="Відкрити список файлів"
             >
               <HugeiconsIcon icon={Menu01Icon} />
             </Button>
@@ -375,13 +376,13 @@ export function AppShell() {
               onClick={() => setSidebarCollapsed((value) => !value)}
               aria-label={
                 sidebarCollapsed
-                  ? "Показать список файлов"
-                  : "Скрыть список файлов"
+                  ? "Показати список файлів"
+                  : "Приховати список файлів"
               }
               title={
                 sidebarCollapsed
-                  ? "Показать список файлов"
-                  : "Скрыть список файлов"
+                  ? "Показати список файлів"
+                  : "Приховати список файлів"
               }
             >
               <HugeiconsIcon icon={SidebarLeft01Icon} />
@@ -389,12 +390,12 @@ export function AppShell() {
 
             <div className="flex w-40 min-w-0 shrink-0 flex-col sm:w-52">
               <span className="truncate text-sm font-semibold">
-                {activeDataset?.name ?? "Файл не загружен"}
+                {activeDataset?.name ?? "Файл не завантажено"}
               </span>
               <span className="truncate text-xs text-muted-foreground">
                 {activeDataset
-                  ? `${products.size} товаров · ${groups.size} групп`
-                  : "Загрузите CSV, чтобы начать группировку"}
+                  ? `${productsLabel(products.size)} · ${groupsLabel(groups.size)}`
+                  : "Завантажте CSV, щоб почати групування"}
               </span>
             </div>
 
@@ -422,7 +423,7 @@ export function AppShell() {
                     icon={CheckmarkCircleIcon}
                     className="size-3.5"
                   />
-                  Сохранено
+                  Збережено
                 </span>
               ) : null}
               <Button
@@ -458,12 +459,12 @@ export function AppShell() {
                   <EmptyMedia variant="icon">
                     <HugeiconsIcon icon={FileImportIcon} />
                   </EmptyMedia>
-                  <EmptyTitle>Файл не загружен</EmptyTitle>
+                  <EmptyTitle>Файл не завантажено</EmptyTitle>
                   <EmptyDescription>
-                    Загрузите CSV с товарами — они автоматически сгруппируются
-                    по общим ссылкам на фото, а затем Jev проверит, не являются
-                    ли разные группы вариантами одной модели. Дальше группы
-                    можно править вручную и экспортировать в XLSX.
+                    Завантажте CSV з товарами — вони автоматично згрупуються
+                    за спільними посиланнями на фото, а потім Jev перевірить,
+                    чи не є різні групи варіантами однієї моделі. Далі групи
+                    можна редагувати вручну та експортувати в XLSX.
                   </EmptyDescription>
                 </EmptyHeader>
                 <Button onClick={() => setImportOpen(true)}>
@@ -471,7 +472,7 @@ export function AppShell() {
                     icon={FileImportIcon}
                     data-icon="inline-start"
                   />
-                  Загрузить CSV
+                  Завантажити CSV
                 </Button>
               </Empty>
             ) : visibleGroups.length === 0 ? (
@@ -480,9 +481,9 @@ export function AppShell() {
                   <EmptyMedia variant="icon">
                     <HugeiconsIcon icon={GroupLayersIcon} />
                   </EmptyMedia>
-                  <EmptyTitle>Ничего не найдено</EmptyTitle>
+                  <EmptyTitle>Нічого не знайдено</EmptyTitle>
                   <EmptyDescription>
-                    Измените поиск, фильтр категории или быстрый фильтр.
+                    Змініть пошук, фільтр категорії або швидкий фільтр.
                   </EmptyDescription>
                 </EmptyHeader>
                 <Button
@@ -493,7 +494,7 @@ export function AppShell() {
                     useAppStore.getState().setQuickFilter("all");
                   }}
                 >
-                  Сбросить фильтры
+                  Скинути фільтри
                 </Button>
               </Empty>
             ) : (
@@ -522,15 +523,10 @@ export function AppShell() {
                         {showCategoryHeader ? (
                           <div className="sticky top-0 z-30 -mx-4 flex items-baseline gap-2 border-b bg-background px-4 py-2">
                             <h2 className="text-sm font-semibold">
-                              {group.categoryTitle || "Без категории"}
+                              {group.categoryTitle || "Без категорії"}
                             </h2>
                             <span className="text-xs text-muted-foreground">
-                              {groupCount}{" "}
-                              {groupCount === 1
-                                ? "группа"
-                                : groupCount < 5
-                                  ? "группы"
-                                  : "групп"}
+                              {groupsLabel(groupCount)}
                             </span>
                           </div>
                         ) : null}
@@ -603,23 +599,23 @@ export function AppShell() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Удалить группу?</AlertDialogTitle>
+            <AlertDialogTitle>Видалити групу?</AlertDialogTitle>
             <AlertDialogDescription>
-              Группа № {deleteTarget?.number} «{deleteTarget?.title}» будет
-              удалена. Её товары не
-              пропадут: каждый перейдёт в отдельную группу или в существующую
-              группу с таким же названием.
+              Група № {deleteTarget?.number} «{deleteTarget?.title}» буде
+              видалено. Її товари не
+              зникнуть: кожен перейде в окрему групу або в наявну
+              групу з такою самою назвою.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogCancel>Скасувати</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (deleteTarget) void deleteGroup(deleteTarget.id);
                 setDeleteTarget(null);
               }}
             >
-              Удалить
+              Видалити
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -633,9 +629,9 @@ export function AppShell() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Проверка перед экспортом</AlertDialogTitle>
+            <AlertDialogTitle>Перевірка перед експортом</AlertDialogTitle>
             <AlertDialogDescription>
-              Найдены особенности, которые стоит проверить:
+              Знайдено особливості, які варто перевірити:
             </AlertDialogDescription>
           </AlertDialogHeader>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
@@ -644,14 +640,14 @@ export function AppShell() {
             ))}
           </ul>
           <AlertDialogFooter>
-            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogCancel>Скасувати</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 setExportWarnings(null);
                 void runExport();
               }}
             >
-              Всё равно экспортировать
+              Все одно експортувати
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -659,7 +655,7 @@ export function AppShell() {
 
       {isLoading ? (
         <div className="pointer-events-none fixed right-4 bottom-4 rounded-lg border bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm">
-          Обработка…
+          Обробка…
         </div>
       ) : null}
 

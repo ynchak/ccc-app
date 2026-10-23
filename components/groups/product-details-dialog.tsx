@@ -157,8 +157,8 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
           type="button"
           onClick={() => setIsZoomed(true)}
           className="absolute inset-0 flex cursor-zoom-in items-center justify-center p-2"
-          aria-label="Увеличить фото"
-          title="Нажмите, чтобы увеличить"
+          aria-label="Збільшити фото"
+          title="Натисніть, щоб збільшити"
         >
           <span className="relative block h-full w-full">
             <Image
@@ -176,7 +176,7 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
       ) : (
         <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
           <HugeiconsIcon icon={ImageNotFound01Icon} className="size-8" />
-          {images.length === 0 ? "Нет фото" : "Фото не загрузилось"}
+          {images.length === 0 ? "Немає фото" : "Фото не завантажилося"}
         </div>
       )}
 
@@ -185,8 +185,8 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
           type="button"
           onClick={() => setIsZoomed(true)}
           className="absolute top-3 right-3 z-10 flex size-8 items-center justify-center rounded-full bg-background/90 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:text-foreground"
-          aria-label="Увеличить фото"
-          title="Увеличить фото"
+          aria-label="Збільшити фото"
+          title="Збільшити фото"
         >
           <HugeiconsIcon icon={ZoomInAreaIcon} className="size-4" />
         </button>
@@ -198,7 +198,7 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
             type="button"
             onClick={showPrev}
             className="absolute top-1/2 left-3 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-foreground shadow-sm backdrop-blur transition-opacity hover:opacity-100"
-            aria-label="Предыдущее фото"
+            aria-label="Попереднє фото"
           >
             <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
           </button>
@@ -206,7 +206,7 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
             type="button"
             onClick={showNext}
             className="absolute top-1/2 right-3 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-foreground shadow-sm backdrop-blur transition-opacity hover:opacity-100"
-            aria-label="Следующее фото"
+            aria-label="Наступне фото"
           >
             <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />
           </button>
@@ -222,14 +222,14 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
               className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
               role="dialog"
               aria-modal="true"
-              aria-label="Просмотр фото"
+              aria-label="Перегляд фото"
               onClick={closeZoom}
             >
               <button
                 type="button"
                 onClick={closeZoom}
                 className="absolute top-4 right-4 z-20 flex size-9 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
-                aria-label="Закрыть просмотр"
+                aria-label="Закрити перегляд"
               >
                 <HugeiconsIcon icon={Cancel01Icon} className="size-5" />
               </button>
@@ -271,7 +271,7 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
                       showPrev();
                     }}
                     className="absolute top-1/2 left-4 z-20 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
-                    aria-label="Предыдущее фото"
+                    aria-label="Попереднє фото"
                   >
                     <HugeiconsIcon icon={ArrowLeft01Icon} className="size-5" />
                   </button>
@@ -282,7 +282,7 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
                       showNext();
                     }}
                     className="absolute top-1/2 right-4 z-20 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
-                    aria-label="Следующее фото"
+                    aria-label="Наступне фото"
                   >
                     <HugeiconsIcon icon={ArrowRight01Icon} className="size-5" />
                   </button>
@@ -301,7 +301,7 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
                   onClick={() => setZoomLevel(zoom - 0.5)}
                   disabled={zoom <= 1}
                   className="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/15 disabled:opacity-40"
-                  aria-label="Уменьшить"
+                  aria-label="Зменшити"
                 >
                   <HugeiconsIcon icon={ZoomOutIcon} className="size-4" />
                 </button>
@@ -309,14 +309,14 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
                   {Math.round(zoom * 100)}%
                 </span>
                 <span className="px-1 text-[11px] text-white/60">
-                  клик — увеличить
+                  клік — збільшити
                 </span>
                 <button
                   type="button"
                   onClick={resetZoom}
                   disabled={zoom === 1 && pan.x === 0 && pan.y === 0}
                   className="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/15 disabled:opacity-40"
-                  aria-label="Сбросить масштаб"
+                  aria-label="Скинути масштаб"
                 >
                   <HugeiconsIcon icon={Refresh01Icon} className="size-4" />
                 </button>
@@ -345,11 +345,11 @@ export function ProductDetailsDialog({
     ? [
         { label: "Артикул", value: product.goodsArticle },
         { label: "Бренд", value: product.producersTitle },
-        { label: "Продавец", value: product.sellerTitle },
-        { label: "Категория", value: product.categoryTitle },
-        { label: "Размер", value: product.size },
-        { label: "Цвет", value: product.color },
-        { label: "Рост", value: product.height },
+        { label: "Продавець", value: product.sellerTitle },
+        { label: "Категорія", value: product.categoryTitle },
+        { label: "Розмір", value: product.size },
+        { label: "Колір", value: product.color },
+        { label: "Зріст", value: product.height },
         { label: "EAN", value: product.ean },
         { label: "МДГ", value: product.mdg },
       ].filter(
@@ -363,7 +363,7 @@ export function ProductDetailsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain sm:max-w-5xl">
         <DialogHeader>
-          <DialogTitle>Детали товара</DialogTitle>
+          <DialogTitle>Деталі товару</DialogTitle>
           <DialogDescription>{product?.goodsTitle ?? ""}</DialogDescription>
         </DialogHeader>
 
@@ -393,7 +393,7 @@ export function ProductDetailsDialog({
                   <Separator />
                   <div className="flex flex-col gap-1 pb-2">
                     <span className="text-sm text-muted-foreground">
-                      Описание
+                      Опис
                     </span>
                     <p className="text-sm leading-relaxed whitespace-pre-line">
                       {description}
@@ -407,7 +407,7 @@ export function ProductDetailsDialog({
 
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>
-            Закрыть
+            Закрити
           </DialogClose>
         </DialogFooter>
       </DialogContent>

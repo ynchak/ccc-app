@@ -84,7 +84,7 @@ function readPairs(body: unknown): JevPair[] | null {
 
 export async function GET(request: NextRequest) {
   if (!(await authorized(request))) {
-    return NextResponse.json({ error: "Требуется авторизация" }, { status: 401 });
+    return NextResponse.json({ error: "Потрібна авторизація" }, { status: 401 });
   }
   return NextResponse.json(
     {
@@ -98,13 +98,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   if (!(await authorized(request))) {
-    return NextResponse.json({ error: "Требуется авторизация" }, { status: 401 });
+    return NextResponse.json({ error: "Потрібна авторизація" }, { status: 401 });
   }
 
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "Jev не настроен: отсутствует OPENROUTER_API_KEY" },
+      { error: "Jev не налаштований: відсутній OPENROUTER_API_KEY" },
       { status: 503 },
     );
   }
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
   const pairs = readPairs(await request.json().catch(() => null));
   if (!pairs) {
     return NextResponse.json(
-      { error: "Некорректный запрос" },
+      { error: "Некоректний запит" },
       { status: 400 },
     );
   }
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       error instanceof Error ? error.message : error,
     );
     return NextResponse.json(
-      { error: "Jev не ответил вовремя" },
+      { error: "Jev не відповів вчасно" },
       { status: 504 },
     );
   } finally {
@@ -158,8 +158,8 @@ export async function POST(request: NextRequest) {
       {
         error:
           status === 429
-            ? "OpenRouter временно ограничил запросы"
-            : "OpenRouter вернул ошибку Jev",
+            ? "OpenRouter тимчасово обмежив запити"
+            : "OpenRouter повернув помилку Jev",
       },
       { status },
     );
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
   const payload: unknown = await response.json().catch(() => null);
   if (!payload || typeof payload !== "object") {
     return NextResponse.json(
-      { error: "Некорректный ответ Jev" },
+      { error: "Некоректна відповідь Jev" },
       { status: 502 },
     );
   }
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
   const results = parseJevAnswers(pairs, payload);
   if (results.length === 0) {
     return NextResponse.json(
-      { error: "Jev не вернул результаты" },
+      { error: "Jev не повернув результати" },
       { status: 502 },
     );
   }

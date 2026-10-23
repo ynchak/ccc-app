@@ -13,7 +13,7 @@ import {
 export async function POST(request: NextRequest) {
   if (!isAuthConfigured()) {
     return NextResponse.json(
-      { error: "Авторизация не настроена на сервере" },
+      { error: "Авторизацію не налаштовано на сервері" },
       { status: 503 },
     );
   }
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   if (!(await isValidPassword(password))) {
     await loginDelay();
     return NextResponse.json(
-      { error: "Неверный пароль" },
+      { error: "Невірний пароль" },
       { status: 401, headers: { "cache-control": "no-store" } },
     );
   }

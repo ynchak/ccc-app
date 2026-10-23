@@ -59,7 +59,7 @@ function readItems(body: unknown): CleanTitleInput[] | null {
 
 export async function GET(request: NextRequest) {
   if (!(await authorized(request))) {
-    return NextResponse.json({ error: "Требуется авторизация" }, { status: 401 });
+    return NextResponse.json({ error: "Потрібна авторизація" }, { status: 401 });
   }
   const configured = Boolean(process.env.OPENROUTER_API_KEY);
   return NextResponse.json(
@@ -74,13 +74,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   if (!(await authorized(request))) {
-    return NextResponse.json({ error: "Требуется авторизация" }, { status: 401 });
+    return NextResponse.json({ error: "Потрібна авторизація" }, { status: 401 });
   }
 
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "LLM не настроена: отсутствует OPENROUTER_API_KEY" },
+      { error: "LLM не налаштована: відсутній OPENROUTER_API_KEY" },
       { status: 503 },
     );
   }
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
   const items = readItems(await request.json().catch(() => null));
   if (!items) {
     return NextResponse.json(
-      { error: "Некорректный запрос" },
+      { error: "Некоректний запит" },
       { status: 400 },
     );
   }
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
       error instanceof Error ? error.message : error,
     );
     return NextResponse.json(
-      { error: "OpenRouter не ответил вовремя" },
+      { error: "OpenRouter не відповів вчасно" },
       { status: 504 },
     );
   } finally {
@@ -147,8 +147,8 @@ export async function POST(request: NextRequest) {
       {
         error:
           status === 429
-            ? "OpenRouter временно ограничил запросы"
-            : "OpenRouter вернул ошибку",
+            ? "OpenRouter тимчасово обмежив запити"
+            : "OpenRouter повернув помилку",
       },
       { status },
     );
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
 
   if (typeof content !== "string") {
     return NextResponse.json(
-      { error: "Некорректный ответ LLM" },
+      { error: "Некоректна відповідь LLM" },
       { status: 502 },
     );
   }
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
     parsed = JSON.parse(content);
   } catch {
     return NextResponse.json(
-      { error: "LLM вернула невалидный JSON" },
+      { error: "LLM повернула невалідний JSON" },
       { status: 502 },
     );
   }
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
   const resultsValue = (parsed as { results?: unknown } | null)?.results;
   if (!Array.isArray(resultsValue)) {
     return NextResponse.json(
-      { error: "LLM вернула неожиданный формат" },
+      { error: "LLM повернула неочікуваний формат" },
       { status: 502 },
     );
   }

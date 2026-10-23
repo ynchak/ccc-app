@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { groupsLabel, productsLabel } from "@/lib/plural";
 import { notify } from "@/lib/store/toast-store";
 import { useAppStore } from "@/lib/store/app-store";
 import type { Group, Product } from "@/lib/types";
@@ -92,10 +93,10 @@ export function MergeGroupsDialog({
     if (targetId === null || selectedIds.length < 2) return;
     const ok = await mergeGroups(selectedIds, targetId);
     if (!ok) {
-      notify("Нельзя объединить группы из разных категорий", "error");
+      notify("Не можна об’єднати групи з різних категорій", "error");
       return;
     }
-    notify("Группы объединены", "success");
+    notify("Групи об’єднано", "success");
     onOpenChange(false);
   };
 
@@ -103,10 +104,10 @@ export function MergeGroupsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] min-w-0 overflow-x-hidden overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Объединить группы</DialogTitle>
+          <DialogTitle>Об’єднати групи</DialogTitle>
           <DialogDescription className="break-words">
-            Выберите группу, которая сохранит своё название. Остальные товары
-            перейдут в неё.
+            Виберіть групу, яка збереже свою назву. Інші товари
+            перейдуть до неї.
           </DialogDescription>
         </DialogHeader>
 
@@ -138,14 +139,14 @@ export function MergeGroupsDialog({
                     </span>
                   </span>
                   <span className="min-w-0 truncate text-xs text-muted-foreground">
-                    {group.productIds.length} товаров ·{" "}
-                    {group.categoryTitle || "Без категории"}
+                    {productsLabel(group.productIds.length)} ·{" "}
+                    {group.categoryTitle || "Без категорії"}
                   </span>
                 </span>
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label="Убрать группу"
+                  aria-label="Прибрати групу"
                   onClick={(event) => {
                     event.preventDefault();
                     const next = selectedIds.filter((id) => id !== group.id);
@@ -161,7 +162,7 @@ export function MergeGroupsDialog({
 
           {selected.length > 0 ? (
             <div className="flex flex-col gap-2">
-              <Label>Добавить группу</Label>
+              <Label>Додати групу</Label>
               <div className="relative">
                 <HugeiconsIcon
                   icon={Search01Icon}
@@ -170,14 +171,14 @@ export function MergeGroupsDialog({
                 <Input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Поиск группы…"
+                  placeholder="Пошук групи…"
                   className="pl-8"
                 />
               </div>
               <div className="max-h-48 min-w-0 overflow-y-auto rounded-lg border">
                 {candidates.length === 0 ? (
                   <p className="p-3 text-sm text-muted-foreground">
-                    Больше нет групп в этой категории.
+                    Більше немає груп у цій категорії.
                   </p>
                 ) : (
                   candidates.map((group) => (
@@ -207,18 +208,18 @@ export function MergeGroupsDialog({
 
           {mixedCategories ? (
             <p className="text-sm text-destructive">
-              Выбраны группы из разных категорий — объединение невозможно.
+              Вибрано групи з різних категорій — об’єднання неможливе.
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Итого: {totalProducts} товаров в {selected.length} группах
+              Разом: {productsLabel(totalProducts)}, {groupsLabel(selected.length)}
             </p>
           )}
         </div>
 
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>
-            Отмена
+            Скасувати
           </DialogClose>
           <Button
             onClick={() => void handleMerge()}
@@ -226,7 +227,7 @@ export function MergeGroupsDialog({
               targetId === null || selectedIds.length < 2 || mixedCategories
             }
           >
-            Объединить
+            Об’єднати
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -296,11 +297,11 @@ export function MoveProductsDialog({
   const handleMove = async (groupId: number) => {
     const ok = await moveProducts(ids, groupId);
     if (!ok) {
-      notify("Не удалось перенести товары", "error");
+      notify("Не вдалося перемістити товари", "error");
       return;
     }
     notify(
-      ids.length === 1 ? "Товар перенесён" : `Перенесено товаров: ${ids.length}`,
+      ids.length === 1 ? "Товар переміщено" : `Переміщено товарів: ${ids.length}`,
       "success",
     );
     onOpenChange(false);
@@ -309,20 +310,20 @@ export function MoveProductsDialog({
   const handleCreate = async () => {
     const groupId = await createGroupFromProducts(ids);
     if (groupId === null) {
-      notify("Не удалось создать группу", "error");
+      notify("Не вдалося створити групу", "error");
       return;
     }
-    notify("Товары сгруппированы", "success");
+    notify("Товари згруповано", "success");
     onOpenChange(false);
   };
 
   const handleDetach = async () => {
     const ok = await detachProducts(ids);
     if (!ok) {
-      notify("Нечего выносить в отдельные группы");
+      notify("Немає що виносити в окремі групи");
       return;
     }
-    notify("Товары вынесены в отдельные группы", "success");
+    notify("Товари винесено в окремі групи", "success");
     onOpenChange(false);
   };
 
@@ -332,24 +333,24 @@ export function MoveProductsDialog({
         <DialogHeader>
           <DialogTitle>
             {ids.length === 1
-              ? "Перенести товар"
-              : `Перенести товары (${ids.length})`}
+              ? "Перемістити товар"
+              : `Перемістити товари (${ids.length})`}
           </DialogTitle>
           <DialogDescription className="break-words">
             {selectedProducts.length === 1
               ? selectedProducts[0].goodsTitle
               : mixedCategories
-                ? "Выбраны товары из разных категорий."
-                : `Категория: ${
-                    selectedProducts[0]?.categoryTitle || "Без категории"
+                ? "Вибрано товари з різних категорій."
+                : `Категорія: ${
+                    selectedProducts[0]?.categoryTitle || "Без категорії"
                   }`}
           </DialogDescription>
         </DialogHeader>
 
         {mixedCategories ? (
           <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-            Перенести все выбранные товары в одну группу нельзя: они из разных
-            категорий. Можно вынести каждый товар в отдельную группу.
+            Перемістити всі вибрані товари в одну групу не можна: вони з різних
+            категорій. Можна винести кожен товар в окрему групу.
           </p>
         ) : (
           <div className="flex flex-col gap-2">
@@ -361,7 +362,7 @@ export function MoveProductsDialog({
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Поиск группы…"
+                placeholder="Пошук групи…"
                 className="pl-8"
               />
             </div>
@@ -369,7 +370,7 @@ export function MoveProductsDialog({
             <div className="max-h-72 min-w-0 overflow-y-auto rounded-lg border">
               {candidates.length === 0 ? (
                 <p className="p-4 text-sm text-muted-foreground">
-                  Групп не найдено. Создайте новую.
+                  Груп не знайдено. Створіть нову.
                 </p>
               ) : (
                 candidates.map((group) => (
@@ -399,13 +400,13 @@ export function MoveProductsDialog({
 
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>
-            Отмена
+            Скасувати
           </DialogClose>
           <Button variant="secondary" onClick={() => void handleDetach()}>
-            {ids.length === 1 ? "В отдельную группу" : "Каждый отдельно"}
+            {ids.length === 1 ? "В окрему групу" : "Кожен окремо"}
           </Button>
           <Button onClick={() => void handleCreate()} disabled={mixedCategories}>
-            Создать новую группу
+            Створити нову групу
           </Button>
         </DialogFooter>
       </DialogContent>

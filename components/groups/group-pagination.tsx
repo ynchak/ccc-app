@@ -51,12 +51,12 @@ export function GroupPagination({
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b py-2 text-sm">
       <span className="text-muted-foreground">
-        Группы {start}–{end} из {totalItems}
+        Групи {start}–{end} з {totalItems}
       </span>
 
       {showPageSize ? (
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-muted-foreground">На странице</span>
+          <span className="text-muted-foreground">На сторінці</span>
           <Select
             value={String(pageSize)}
             onValueChange={(value) =>
@@ -87,8 +87,8 @@ export function GroupPagination({
           size="icon-sm"
           onClick={() => onPageChange(1)}
           disabled={page <= 1}
-          aria-label="Первая страница"
-          title="Первая страница"
+          aria-label="Перша сторінка"
+          title="Перша сторінка"
         >
           <HugeiconsIcon icon={ArrowLeftDoubleIcon} />
         </Button>
@@ -97,14 +97,14 @@ export function GroupPagination({
           size="icon-sm"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          aria-label="Предыдущая страница"
-          title="Предыдущая страница"
+          aria-label="Попередня сторінка"
+          title="Попередня сторінка"
         >
           <HugeiconsIcon icon={ArrowLeft01Icon} />
         </Button>
 
         <span className="min-w-28 px-2 text-center text-muted-foreground">
-          Страница {page} из {totalPages}
+          Сторінка {page} з {totalPages}
         </span>
 
         <Button
@@ -112,8 +112,8 @@ export function GroupPagination({
           size="icon-sm"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
-          aria-label="Следующая страница"
-          title="Следующая страница"
+          aria-label="Наступна сторінка"
+          title="Наступна сторінка"
         >
           <HugeiconsIcon icon={ArrowRight01Icon} />
         </Button>
@@ -122,8 +122,8 @@ export function GroupPagination({
           size="icon-sm"
           onClick={() => onPageChange(totalPages)}
           disabled={page >= totalPages}
-          aria-label="Последняя страница"
-          title="Последняя страница"
+          aria-label="Остання сторінка"
+          title="Остання сторінка"
         >
           <HugeiconsIcon icon={ArrowRightDoubleIcon} />
         </Button>

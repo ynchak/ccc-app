@@ -104,8 +104,8 @@ export const ProductCard = memo(function ProductCard({
           className="absolute inset-0 flex cursor-zoom-in items-center justify-center p-2 disabled:cursor-default"
           onClick={() => setLightboxOpen(true)}
           disabled={!currentImage || imageFailed}
-          aria-label="Увеличить фото"
-          title="Нажмите, чтобы увеличить"
+          aria-label="Збільшити фото"
+          title="Натисніть, щоб збільшити"
         >
           {currentImage && !imageFailed ? (
             <span className="relative block h-full w-full">
@@ -123,7 +123,7 @@ export const ProductCard = memo(function ProductCard({
           ) : (
             <div className="flex flex-col items-center gap-1 text-xs text-muted-foreground">
               <HugeiconsIcon icon={ImageNotFound01Icon} className="size-6" />
-              {images.length === 0 ? "Нет фото" : "Фото не загрузилось"}
+              {images.length === 0 ? "Немає фото" : "Фото не завантажилося"}
             </div>
           )}
         </button>
@@ -133,7 +133,7 @@ export const ProductCard = memo(function ProductCard({
             <Checkbox
               checked={selected}
               onCheckedChange={() => toggleProductSelection(product.id)}
-              aria-label={`Выбрать товар ${product.goodsTitle}`}
+              aria-label={`Вибрати товар ${product.goodsTitle}`}
             />
           </div>
 
@@ -143,8 +143,8 @@ export const ProductCard = memo(function ProductCard({
               className="flex size-7 cursor-grab items-center justify-center rounded-md bg-background/90 text-muted-foreground shadow-sm backdrop-blur hover:text-foreground active:cursor-grabbing"
               draggable
               onDragStart={handleDragStart}
-              aria-label="Перетащить товар"
-              title="Перетащить товар в другую группу"
+              aria-label="Перетягнути товар"
+              title="Перетягніть товар до іншої групи"
             >
               <HugeiconsIcon icon={GripVerticalIcon} className="size-4" />
             </button>
@@ -156,7 +156,7 @@ export const ProductCard = memo(function ProductCard({
                     variant="secondary"
                     size="icon-sm"
                     className="bg-background/90 shadow-sm backdrop-blur"
-                    aria-label="Действия с товаром"
+                    aria-label="Дії з товаром"
                   />
                 }
               >
@@ -169,14 +169,14 @@ export const ProductCard = memo(function ProductCard({
                       icon={InformationCircleIcon}
                       data-icon="inline-start"
                     />
-                    Детали
+                    Деталі
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onMove(product)}>
                     <HugeiconsIcon
                       icon={MoveHorizontalIcon}
                       data-icon="inline-start"
                     />
-                    Перенести в группу…
+                    Перемістити до групи…
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => void removeProductFromGroup(product.id)}
@@ -185,7 +185,7 @@ export const ProductCard = memo(function ProductCard({
                       icon={UnfoldMoreIcon}
                       data-icon="inline-start"
                     />
-                    Вынести в отдельную группу
+                    Винести в окрему групу
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
@@ -196,7 +196,7 @@ export const ProductCard = memo(function ProductCard({
                     icon={CheckmarkCircle01Icon}
                     data-icon="inline-start"
                   />
-                  {selected ? "Снять выбор" : "Выбрать товар"}
+                  {selected ? "Зняти вибір" : "Вибрати товар"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -209,7 +209,7 @@ export const ProductCard = memo(function ProductCard({
               type="button"
               onClick={handlePrevImage}
               className="absolute top-1/2 left-2 z-10 flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-foreground opacity-80 shadow-sm backdrop-blur transition-opacity hover:opacity-100 focus-visible:opacity-100"
-              aria-label="Предыдущее фото"
+              aria-label="Попереднє фото"
             >
               <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
             </button>
@@ -217,7 +217,7 @@ export const ProductCard = memo(function ProductCard({
               type="button"
               onClick={handleNextImage}
               className="absolute top-1/2 right-2 z-10 flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-foreground opacity-80 shadow-sm backdrop-blur transition-opacity hover:opacity-100 focus-visible:opacity-100"
-              aria-label="Следующее фото"
+              aria-label="Наступне фото"
             >
               <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" />
             </button>
@@ -230,7 +230,7 @@ export const ProductCard = memo(function ProductCard({
 
         {images.length === 0 ? (
           <span className="absolute right-2 bottom-2 z-10 rounded bg-amber-500/90 px-1.5 py-0.5 text-[10px] font-medium text-white">
-            нет фото
+            немає фото
           </span>
         ) : null}
       </div>
@@ -258,7 +258,7 @@ export const ProductCard = memo(function ProductCard({
               <Badge
                 variant="outline"
                 className="max-w-full text-[11px] text-muted-foreground"
-                title={`Продавец: ${product.sellerTitle}`}
+                title={`Продавець: ${product.sellerTitle}`}
               >
                 {product.sellerTitle}
               </Badge>
@@ -267,14 +267,14 @@ export const ProductCard = memo(function ProductCard({
         ) : null}
 
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-md border bg-muted/30 px-2.5 py-2 text-xs">
-          <dt className="text-muted-foreground">Размер</dt>
+          <dt className="text-muted-foreground">Розмір</dt>
           <dd className="truncate text-foreground" title={product.size ?? "—"}>
             {product.size || "—"}
           </dd>
 
           {product.height ? (
             <>
-              <dt className="text-muted-foreground">Рост</dt>
+              <dt className="text-muted-foreground">Зріст</dt>
               <dd
                 className="truncate text-foreground"
                 title={product.height}
@@ -284,7 +284,7 @@ export const ProductCard = memo(function ProductCard({
             </>
           ) : null}
 
-          <dt className="text-muted-foreground">Цвет</dt>
+          <dt className="text-muted-foreground">Колір</dt>
           <dd className="truncate text-foreground" title={product.color ?? "—"}>
             {product.color || "—"}
           </dd>
@@ -307,7 +307,7 @@ export const ProductCard = memo(function ProductCard({
             className="text-muted-foreground hover:text-foreground"
           >
             <HugeiconsIcon icon={InformationCircleIcon} data-icon="inline-start" />
-            Детали
+            Деталі
           </Button>
 
           {gomerUrl ? (
@@ -319,7 +319,7 @@ export const ProductCard = memo(function ProductCard({
                 buttonVariants({ variant: "outline", size: "xs" }),
                 "border-orange-500/30 bg-orange-500/15 text-orange-950 hover:bg-orange-500/25 hover:text-orange-950 dark:border-orange-400/30 dark:bg-orange-400/15 dark:text-orange-50 dark:hover:bg-orange-400/25",
               )}
-              title="Открыть товар в Gomer"
+              title="Відкрити товар у Gomer"
             >
               Gomer
             </a>
@@ -329,7 +329,7 @@ export const ProductCard = memo(function ProductCard({
                 buttonVariants({ variant: "outline", size: "xs" }),
                 "cursor-default border-orange-500/20 bg-orange-500/10 text-orange-950/50 dark:border-orange-400/20 dark:bg-orange-400/10 dark:text-orange-50/50",
               )}
-              title="Нет gomer_sync_source_id"
+              title="Немає gomer_sync_source_id"
             >
               Gomer
             </span>
@@ -344,7 +344,7 @@ export const ProductCard = memo(function ProductCard({
                 buttonVariants({ variant: "outline", size: "xs" }),
                 "border-emerald-500/30 bg-emerald-500/15 text-emerald-950 hover:bg-emerald-500/25 hover:text-emerald-950 dark:border-emerald-400/30 dark:bg-emerald-400/15 dark:text-emerald-50 dark:hover:bg-emerald-400/25",
               )}
-              title="Открыть товар на Rozetka"
+              title="Відкрити товар на Rozetka"
             >
               RZ
             </a>

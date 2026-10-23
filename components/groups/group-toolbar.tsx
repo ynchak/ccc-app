@@ -30,6 +30,7 @@ import {
   CARD_SIZE_OPTIONS,
   type CardSize,
 } from "@/lib/card-size";
+import { groupsLabel, productsLabel, singlesLabel } from "@/lib/plural";
 import {
   useAppStore,
   useCategories,
@@ -41,15 +42,15 @@ import {
 /** Подписи вариантов сортировки. */
 const SORT_LABELS: Record<SortBy, string> = {
   order: "За порядком",
-  title: "За названием",
-  count: "По количеству",
-  category: "По категории",
+  title: "За назвою",
+  count: "За кількістю",
+  category: "За категорією",
 };
 
 /** Быстрые фильтры. */
 const QUICK_FILTERS: { value: QuickFilter; label: string }[] = [
-  { value: "all", label: "Все" },
-  { value: "singles", label: "Одиночные" },
+  { value: "all", label: "Усі" },
+  { value: "singles", label: "Одиночні" },
 ];
 
 /** Галочка выбранного пункта меню. */
@@ -98,18 +99,18 @@ export function GroupHeaderControls({
   const categories = useCategories();
 
   const categoryLabel = (value: string | null) => {
-    if (value === null) return "Все категории";
+    if (value === null) return "Усі категорії";
     return (
       categories.find((category) => category.id === value)?.title ??
-      (value === "" ? "Без категории" : value)
+      (value === "" ? "Без категорії" : value)
     );
   };
 
-  const sortLabel = (value: SortBy) => SORT_LABELS[value] ?? "Сортировка";
+  const sortLabel = (value: SortBy) => SORT_LABELS[value] ?? "Сортування";
 
   const cardSizeLabel = (value: CardSize) =>
     CARD_SIZE_OPTIONS.find((option) => option.value === value)?.label ??
-    "Средние";
+    "Середні";
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -121,7 +122,7 @@ export function GroupHeaderControls({
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Поиск по названию, артикулу или id…"
+          placeholder="Пошук за назвою, артикулом або id…"
           className="pl-8"
         />
       </div>
@@ -132,8 +133,8 @@ export function GroupHeaderControls({
             <Button
               variant={categoryFilter !== null ? "secondary" : "outline"}
               size="icon"
-              aria-label="Фильтр по категории"
-              title={`Категория: ${categoryLabel(categoryFilter)}`}
+              aria-label="Фільтр за категорією"
+              title={`Категорія: ${categoryLabel(categoryFilter)}`}
             />
           }
         >
@@ -143,7 +144,7 @@ export function GroupHeaderControls({
           <DropdownMenuGroup>
             <DropdownMenuItem onClick={() => setCategoryFilter(null)}>
               <MenuCheck checked={categoryFilter === null} />
-              <span className="truncate">Все категории</span>
+              <span className="truncate">Усі категорії</span>
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
@@ -172,8 +173,8 @@ export function GroupHeaderControls({
             <Button
               variant="outline"
               size="icon"
-              aria-label="Сортировка"
-              title={`Сортировка: ${sortLabel(sortBy)}`}
+              aria-label="Сортування"
+              title={`Сортування: ${sortLabel(sortBy)}`}
             />
           }
         >
@@ -195,7 +196,7 @@ export function GroupHeaderControls({
                 icon={Refresh01Icon}
                 className="size-3.5 text-muted-foreground"
               />
-              Пересортировать сейчас
+              Пересортувати зараз
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
@@ -207,8 +208,8 @@ export function GroupHeaderControls({
             <Button
               variant="outline"
               size="icon"
-              aria-label="Размер карточек"
-              title={`Карточки: ${cardSizeLabel(cardSize)}`}
+              aria-label="Розмір карток"
+              title={`Картки: ${cardSizeLabel(cardSize)}`}
             />
           }
         >
@@ -234,10 +235,10 @@ export function GroupHeaderControls({
           variant="secondary"
           size="sm"
           onClick={onOpenSuggestions}
-          title="Проверить возможные объединения по модели"
+          title="Перевірити можливі об’єднання за моделлю"
         >
           <HugeiconsIcon icon={GroupLayersIcon} data-icon="inline-start" />
-          Предложения: {suggestionCount}
+          Пропозиції: {suggestionCount}
         </Button>
       ) : null}
 
@@ -246,11 +247,11 @@ export function GroupHeaderControls({
         size="icon"
         onClick={onCleanTitles}
         disabled={isCleaning}
-        aria-label="Очистить названия и проверить модели ИИ"
+        aria-label="Очистити назви та перевірити моделі ШІ"
         title={
           isCleaning
-            ? "Очистка названий и проверка моделей…"
-            : "Очистить названия и проверить модели ИИ"
+            ? "Очищення назв і перевірка моделей…"
+            : "Очистити назви та перевірити моделі ШІ"
         }
       >
         <HugeiconsIcon
@@ -263,20 +264,20 @@ export function GroupHeaderControls({
         variant="outline"
         size="icon"
         onClick={resort}
-        aria-label="Пересортировать по текущему правилу"
-        title="Пересортировать по текущему правилу"
+        aria-label="Пересортувати за поточним правилом"
+        title="Пересортувати за поточним правилом"
       >
         <HugeiconsIcon icon={Refresh01Icon} />
       </Button>
 
       <Button variant="outline" onClick={onUndo} disabled={!canUndo}>
         <HugeiconsIcon icon={Undo02Icon} data-icon="inline-start" />
-        Отменить
+        Скасувати
       </Button>
 
       <Button onClick={onExport} disabled={isExporting}>
         <HugeiconsIcon icon={Download01Icon} data-icon="inline-start" />
-        {isExporting ? "Экспорт…" : "Экспорт XLSX"}
+        {isExporting ? "Експорт…" : "Експорт XLSX"}
       </Button>
     </div>
   );
@@ -330,8 +331,8 @@ export function GroupFilterBar({
         </div>
 
         <span className="ml-auto text-xs text-muted-foreground">
-          {counters.products} товаров · {counters.groups} групп
-          {counters.singles > 0 ? ` · ${counters.singles} одиночных` : ""}
+          {productsLabel(counters.products)} · {groupsLabel(counters.groups)}
+          {counters.singles > 0 ? ` · ${singlesLabel(counters.singles)}` : ""}
           {counters.productsWithoutPhotos > 0
             ? ` · без фото: ${counters.productsWithoutPhotos}`
             : ""}
@@ -341,15 +342,15 @@ export function GroupFilterBar({
       {selectedGroupIds.size > 0 ? (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm">
           <span className="font-medium">
-            Выбрано групп: {selectedGroupIds.size}
+            Вибрано: {groupsLabel(selectedGroupIds.size)}
           </span>
           <Button size="sm" onClick={onMergeSelected}>
             <HugeiconsIcon icon={GroupLayersIcon} data-icon="inline-start" />
-            Объединить
+            Об’єднати
           </Button>
           <Button size="sm" variant="ghost" onClick={clearGroupSelection}>
             <HugeiconsIcon icon={Cancel01Icon} data-icon="inline-start" />
-            Снять выбор
+            Зняти вибір
           </Button>
         </div>
       ) : null}

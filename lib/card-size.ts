@@ -1,8 +1,8 @@
 /** Варианты размера карточек товаров. */
 export const CARD_SIZE_OPTIONS = [
-  { value: "small", label: "Маленькие" },
-  { value: "medium", label: "Средние" },
-  { value: "large", label: "Большие" },
+  { value: "small", label: "Маленькі" },
+  { value: "medium", label: "Середні" },
+  { value: "large", label: "Великі" },
 ] as const;
 
 export type CardSize = (typeof CARD_SIZE_OPTIONS)[number]["value"];

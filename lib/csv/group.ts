@@ -26,7 +26,7 @@ export function groupCsvText(text: string): GroupedCsv {
 
   if (products.length === 0) {
     throw new Error(
-      "В файле не найдено ни одного товара. Проверьте заголовки и колонки goods_id.",
+      "У файлі не знайдено жодного товару. Перевірте заголовки та колонки goods_id.",
     );
   }
 

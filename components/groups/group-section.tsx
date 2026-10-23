@@ -34,6 +34,7 @@ import {
   setDragIds,
 } from "@/lib/dnd";
 import { CARD_GRID_CLASSES } from "@/lib/card-size";
+import { productsLabel } from "@/lib/plural";
 import { normalizeTitle } from "@/lib/grouping/cluster";
 import {
   useAppStore,
@@ -41,19 +42,6 @@ import {
 } from "@/lib/store/app-store";
 import { notify } from "@/lib/store/toast-store";
 import type { Group, Product } from "@/lib/types";
-
-/**
- * Подпись количества товаров с правильным склонением.
- */
-function productsLabel(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod10 === 1 && mod100 !== 11) return `${count} товар`;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
-    return `${count} товара`;
-  }
-  return `${count} товаров`;
-}
 
 /**
  * Секция группы: название, мета-информация и карточки её товаров.
@@ -108,7 +96,7 @@ export const GroupSection = memo(function GroupSection({
 
     const value = draftTitle.trim();
     if (!value) {
-      notify("Название группы не может быть пустым", "error");
+      notify("Назва групи не може бути порожньою", "error");
       setDraftTitle(group.title);
       setIsEditing(false);
       savingRef.current = false;
@@ -132,14 +120,14 @@ export const GroupSection = memo(function GroupSection({
     const ok = await renameGroup(group.id, value);
     savingRef.current = false;
     if (!ok) {
-      notify("Не удалось переименовать группу", "error");
+      notify("Не вдалося перейменувати групу", "error");
       setDraftTitle(group.title);
       return;
     }
     if (duplicate) {
-      notify("Названия совпали — группы объединены", "success");
+      notify("Назви збіглися — групи об’єднано", "success");
     } else {
-      notify("Название группы сохранено", "success");
+      notify("Назву групи збережено", "success");
     }
   };
 
@@ -186,12 +174,12 @@ export const GroupSection = memo(function GroupSection({
       if (sourceIds.length === 0) return;
       const ok = await mergeGroups(sourceIds, group.id);
       if (!ok) {
-        notify("Нельзя объединить группы из разных категорий", "error");
+        notify("Не можна об’єднати групи з різних категорій", "error");
       } else {
         notify(
           sourceIds.length === 1
-            ? "Группы объединены"
-            : "Несколько групп объединены",
+            ? "Групи об’єднано"
+            : "Кілька груп об’єднано",
           "success",
         );
       }
@@ -204,14 +192,14 @@ export const GroupSection = memo(function GroupSection({
       const ok = await moveProducts(productIds, group.id);
       if (!ok) {
         notify(
-          "Товар нельзя перенести в группу другой категории",
+          "Товар не можна перемістити до групи іншої категорії",
           "error",
         );
       } else {
         notify(
           productIds.length === 1
-            ? "Товар перенесён"
-            : `Перенесено товаров: ${productIds.length}`,
+            ? "Товар переміщено"
+            : `Переміщено товарів: ${productIds.length}`,
           "success",
         );
       }
@@ -238,8 +226,8 @@ export const GroupSection = memo(function GroupSection({
               className="flex cursor-grab items-center justify-center text-muted-foreground/50 hover:text-muted-foreground active:cursor-grabbing"
               draggable
               onDragStart={handleGroupDragStart}
-              aria-label="Перетащить группу"
-              title="Перетащить группу на другую группу, чтобы объединить"
+              aria-label="Перетягнути групу"
+              title="Перетягніть групу на іншу групу, щоб об’єднати"
             >
               <HugeiconsIcon icon={GripVerticalIcon} className="size-4" />
             </button>
@@ -247,7 +235,7 @@ export const GroupSection = memo(function GroupSection({
             <Checkbox
               checked={isSelected}
               onCheckedChange={() => toggleGroupSelection(group.id)}
-              aria-label={`Выбрать группу ${group.title}`}
+              aria-label={`Вибрати групу ${group.title}`}
             />
 
             <div className="relative flex min-w-0 flex-1 items-center gap-2">
@@ -257,13 +245,13 @@ export const GroupSection = memo(function GroupSection({
                 disabled={isEditing}
                 aria-expanded={isOpen}
                 aria-controls={`group-content-${group.id}`}
-                aria-label={`${isOpen ? "Свернуть" : "Развернуть"} группу ${group.title}`}
+                aria-label={`${isOpen ? "Згорнути" : "Розгорнути"} групу ${group.title}`}
                 className="absolute inset-0 cursor-pointer rounded-md bg-transparent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-default"
               />
 
               <span
                 className="pointer-events-none shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground"
-                title="Номер группы"
+                title="Номер групи"
               >
                 № {group.number}
               </span>
@@ -287,14 +275,14 @@ export const GroupSection = memo(function GroupSection({
                     }
                   }}
                   className="relative z-10 h-8 min-w-0 flex-1 text-sm font-semibold"
-                  aria-label="Название группы"
+                  aria-label="Назва групи"
                 />
               ) : (
                 <button
                   type="button"
                   className="relative z-10 max-w-full min-w-0 cursor-text text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   onClick={() => setIsEditing(true)}
-                  title="Нажмите, чтобы переименовать"
+                  title="Натисніть, щоб перейменувати"
                 >
                   <h2
                     className="truncate text-sm leading-snug font-semibold hover:underline hover:decoration-dotted hover:underline-offset-4"
@@ -309,13 +297,13 @@ export const GroupSection = memo(function GroupSection({
                 <HugeiconsIcon
                   icon={Edit02Icon}
                   className="pointer-events-none size-3.5 shrink-0 text-muted-foreground"
-                  aria-label="Название изменено вручную"
+                  aria-label="Назву змінено вручну"
                 />
               ) : group.titleSource === "llm" ? (
                 <HugeiconsIcon
                   icon={SparklesIcon}
                   className="pointer-events-none size-3.5 shrink-0 text-muted-foreground"
-                  aria-label="Название очищено ИИ"
+                  aria-label="Назву очищено ШІ"
                 />
               ) : null}
 
@@ -337,7 +325,7 @@ export const GroupSection = memo(function GroupSection({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    aria-label="Действия с группой"
+                    aria-label="Дії з групою"
                   />
                 }
               >
@@ -347,14 +335,14 @@ export const GroupSection = memo(function GroupSection({
                 <DropdownMenuGroup>
                   <DropdownMenuItem onClick={() => setIsEditing(true)}>
                     <HugeiconsIcon icon={Edit02Icon} data-icon="inline-start" />
-                    Переименовать
+                    Перейменувати
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onMerge(group)}>
                     <HugeiconsIcon
                       icon={GroupLayersIcon}
                       data-icon="inline-start"
                     />
-                    Объединить с…
+                    Об’єднати з…
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
@@ -371,13 +359,13 @@ export const GroupSection = memo(function GroupSection({
                       icon={GroupLayersIcon}
                       data-icon="inline-start"
                     />
-                    Выбрать товары группы
+                    Вибрати товари групи
                   </DropdownMenuItem>
                   {group.titleSource === "llm" ? (
                     <DropdownMenuItem
                       onClick={() => {
                         void resetGroupTitle(group.id).then((ok) => {
-                          if (ok) notify("Исходное название восстановлено");
+                          if (ok) notify("Початкову назву відновлено");
                         });
                       }}
                     >
@@ -385,7 +373,7 @@ export const GroupSection = memo(function GroupSection({
                         icon={Refresh01Icon}
                         data-icon="inline-start"
                       />
-                      Вернуть исходное название
+                      Повернути початкову назву
                     </DropdownMenuItem>
                   ) : null}
                 </DropdownMenuGroup>
@@ -395,7 +383,7 @@ export const GroupSection = memo(function GroupSection({
                   onClick={() => onDelete(group)}
                 >
                   <HugeiconsIcon icon={TrashIcon} data-icon="inline-start" />
-                  Удалить группу
+                  Видалити групу
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -417,7 +405,7 @@ export const GroupSection = memo(function GroupSection({
               </div>
             ) : (
               <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                Пустая группа — перетащите сюда товары или переименуйте её.
+                Порожня група — перетягніть сюди товари або перейменуйте її.
               </div>
             )}
           </CardContent>

@@ -30,8 +30,8 @@ export function LogoutButton() {
       size="icon"
       onClick={() => void handleLogout()}
       disabled={isPending}
-      aria-label="Выйти"
-      title="Выйти"
+      aria-label="Вийти"
+      title="Вийти"
     >
       <HugeiconsIcon icon={Logout01Icon} />
     </Button>

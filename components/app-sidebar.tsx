@@ -34,13 +34,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { groupsLabel, productsLabel } from "@/lib/plural";
 import { useAppStore } from "@/lib/store/app-store";
 import { notify } from "@/lib/store/toast-store";
 import type { Dataset } from "@/lib/types";
 
 /** Дата импорта в коротком виде. */
 function formatDate(timestamp: number): string {
-  return new Intl.DateTimeFormat("ru-RU", {
+  return new Intl.DateTimeFormat("uk-UA", {
     day: "2-digit",
     month: "short",
     hour: "2-digit",
@@ -97,7 +98,7 @@ export function AppSidebar({
 
     const value = draftName.trim();
     if (!value) {
-      notify("Имя файла не может быть пустым", "error");
+      notify("Назва файлу не може бути порожньою", "error");
       finishedRef.current = true;
       setEditingId(null);
       savingRef.current = false;
@@ -108,7 +109,7 @@ export function AppSidebar({
     finishedRef.current = true;
     savingRef.current = false;
     setEditingId(null);
-    if (!ok) notify("Не удалось переименовать файл", "error");
+    if (!ok) notify("Не вдалося перейменувати файл", "error");
   };
 
   return (
@@ -134,7 +135,7 @@ export function AppSidebar({
           <div className="min-w-0">
             <h1 className="truncate text-sm font-semibold">Складка</h1>
             <p className="truncate text-xs text-muted-foreground">
-              группировка товаров
+              групування товарів
             </p>
           </div>
           <Button
@@ -142,7 +143,7 @@ export function AppSidebar({
             size="icon-sm"
             className="ml-auto lg:hidden"
             onClick={onClose}
-            aria-label="Закрыть меню"
+            aria-label="Закрити меню"
           >
             <HugeiconsIcon icon={Cancel01Icon} />
           </Button>
@@ -151,7 +152,7 @@ export function AppSidebar({
         <div className="flex min-h-0 flex-1 flex-col gap-2 px-3 py-3">
           <div className="flex items-center justify-between px-1">
             <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Файлы
+              Файли
             </span>
             <span className="text-xs text-muted-foreground">{datasets.length}</span>
           </div>
@@ -159,7 +160,7 @@ export function AppSidebar({
           <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
             {datasets.length === 0 ? (
               <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
-                Файлов пока нет. Загрузите CSV, чтобы начать.
+                Файлів поки немає. Завантажте CSV, щоб почати.
               </div>
             ) : (
               datasets.map((dataset) => {
@@ -194,11 +195,11 @@ export function AppSidebar({
                             }
                           }}
                           className="h-8 text-sm"
-                          aria-label="Имя файла"
-                          title="Enter — сохранить, Esc — отмена"
+                          aria-label="Назва файлу"
+                          title="Enter — зберегти, Esc — скасувати"
                         />
                         <span className="px-1 text-[11px] text-muted-foreground">
-                          Enter — сохранить, Esc — отмена
+                          Enter — зберегти, Esc — скасувати
                         </span>
                       </div>
                     ) : (
@@ -218,8 +219,8 @@ export function AppSidebar({
                             </span>
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            {dataset.rowCount} товаров · {dataset.groupCount}{" "}
-                            групп
+                            {productsLabel(dataset.rowCount)} ·{" "}
+                            {groupsLabel(dataset.groupCount)}
                           </span>
                           <span className="text-[11px] text-muted-foreground/70">
                             {formatDate(dataset.importedAt)}
@@ -233,7 +234,7 @@ export function AppSidebar({
                                 variant="ghost"
                                 size="icon-xs"
                                 className="absolute top-2 right-2"
-                                aria-label={`Действия с файлом ${dataset.name}`}
+                                aria-label={`Дії з файлом ${dataset.name}`}
                               />
                             }
                           >
@@ -248,7 +249,7 @@ export function AppSidebar({
                                   icon={Edit02Icon}
                                   data-icon="inline-start"
                                 />
-                                Переименовать
+                                Перейменувати
                               </DropdownMenuItem>
                             </DropdownMenuGroup>
                             <DropdownMenuSeparator />
@@ -260,7 +261,7 @@ export function AppSidebar({
                                 icon={Delete02Icon}
                                 data-icon="inline-start"
                               />
-                              Удалить
+                              Видалити
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -276,7 +277,7 @@ export function AppSidebar({
         <div className="mt-auto flex items-center gap-2 border-t p-3">
           <Button className="flex-1 justify-start" onClick={onImport}>
             <HugeiconsIcon icon={FileImportIcon} data-icon="inline-start" />
-            Загрузить CSV
+            Завантажити CSV
           </Button>
           <LogoutButton />
           <ThemeSelect />
@@ -291,21 +292,21 @@ export function AppSidebar({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Удалить файл?</AlertDialogTitle>
+            <AlertDialogTitle>Видалити файл?</AlertDialogTitle>
             <AlertDialogDescription>
-              «{deleteTarget?.name}» будет удалён вместе с товарами и группами.
-              Действие нельзя отменить.
+              «{deleteTarget?.name}» буде видалено разом із товарами та групами.
+              Дію не можна скасувати.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogCancel>Скасувати</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (deleteTarget) void removeDataset(deleteTarget.id);
                 setDeleteTarget(null);
               }}
             >
-              Удалить
+              Видалити
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

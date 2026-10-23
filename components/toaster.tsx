@@ -52,7 +52,7 @@ export function Toaster() {
             variant="ghost"
             size="icon-xs"
             onClick={() => dismiss(toast.id)}
-            aria-label="Закрыть уведомление"
+            aria-label="Закрити сповіщення"
           >
             <HugeiconsIcon icon={Cancel01Icon} />
           </Button>

@@ -15,7 +15,7 @@ export default function LoginPage() {
           <div>
             <h1 className="text-sm font-semibold">Складка</h1>
             <p className="text-xs text-muted-foreground">
-              группировка товаров
+              групування товарів
             </p>
           </div>
         </div>

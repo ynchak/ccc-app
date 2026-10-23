@@ -29,7 +29,7 @@ async function readError(response: Response): Promise<string> {
   } catch {
     // ignore
   }
-  return "Ошибка сервиса очистки названий";
+  return "Помилка сервісу очищення назв";
 }
 
 /** Проверяет, настроена ли LLM на сервере. */
@@ -39,7 +39,7 @@ export async function fetchCleanupStatus(): Promise<CleanupStatus> {
     cache: "no-store",
   });
   if (response.status === 503) {
-    throw new LlmNotConfiguredError("LLM не настроена");
+    throw new LlmNotConfiguredError("LLM не налаштована");
   }
   if (!response.ok) {
     throw new LlmRequestError(await readError(response), response.status);
@@ -59,10 +59,10 @@ export async function cleanTitlesBatch(
   });
 
   if (response.status === 401) {
-    throw new LlmRequestError("Сессия истекла. Войдите снова.", 401);
+    throw new LlmRequestError("Сесія завершилася. Увійдіть знову.", 401);
   }
   if (response.status === 503) {
-    throw new LlmNotConfiguredError("LLM не настроена");
+    throw new LlmNotConfiguredError("LLM не налаштована");
   }
   if (!response.ok) {
     throw new LlmRequestError(await readError(response), response.status);

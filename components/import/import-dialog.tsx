@@ -115,7 +115,7 @@ export function ImportDialog({
     try {
       const content = await file.text();
       if (!content.trim()) {
-        throw new Error("Файл пустой — нет данных для группировки.");
+        throw new Error("Файл порожній — немає даних для групування.");
       }
 
       await importFile(file.name, content, (nextStage) => {
@@ -131,29 +131,29 @@ export function ImportDialog({
 
       if (result.skipped) {
         notify(
-          "Файл загружен. LLM не настроена — названия оставлены как есть.",
+          "Файл завантажено. LLM не налаштована — назви залишено як є.",
           "error",
         );
       } else {
         const parts = [
-          result.cleaned > 0 ? `очищено названий: ${result.cleaned}` : null,
-          result.merged > 0 ? `объединено по названию: ${result.merged}` : null,
+          result.cleaned > 0 ? `очищено назв: ${result.cleaned}` : null,
+          result.merged > 0 ? `об’єднано за назвою: ${result.merged}` : null,
           result.modelMerged > 0
-            ? `объединено по модели: ${result.modelMerged}`
+            ? `об’єднано за моделлю: ${result.modelMerged}`
             : null,
           result.suggestions.length > 0
-            ? `предложений: ${result.suggestions.length}`
+            ? `пропозицій: ${result.suggestions.length}`
             : null,
-          result.failed > 0 ? `не обработано: ${result.failed}` : null,
+          result.failed > 0 ? `не оброблено: ${result.failed}` : null,
         ].filter(Boolean);
         const message =
           parts.length > 0
-            ? `Файл загружен: ${parts.join(", ")}.`
-            : "Файл загружен.";
+            ? `Файл завантажено: ${parts.join(", ")}.`
+            : "Файл завантажено.";
         const hasProblem = result.failed > 0 || result.jevFailed;
         notify(
           result.jevFailed
-            ? `${message} Jev не смог проверить модели.`
+            ? `${message} Jev не зміг перевірити моделі.`
             : message,
           hasProblem ? "error" : "success",
         );
@@ -165,12 +165,12 @@ export function ImportDialog({
       const message =
         caught instanceof Error && caught.message
           ? caught.message
-          : "Не удалось обработать файл";
+          : "Не вдалося обробити файл";
 
       // Если файл уже сохранён, не предлагаем выбирать его заново.
       if (fileSaved) {
         notify(
-          `Файл загружен, но названия не очищены: ${message}`,
+          `Файл завантажено, але назви не очищено: ${message}`,
           "error",
         );
         reset();
@@ -198,10 +198,10 @@ export function ImportDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Загрузка CSV</DialogTitle>
+          <DialogTitle>Завантаження CSV</DialogTitle>
           <DialogDescription>
-            Выберите файл — товары сгруппируются по фото, затем ИИ очистит
-            названия групп.
+            Виберіть файл — товари згрупуються за фото, потім ШІ очистить
+            назви груп.
           </DialogDescription>
         </DialogHeader>
 
@@ -210,7 +210,7 @@ export function ImportDialog({
             <div
               role="button"
               tabIndex={0}
-              aria-label="Выбрать CSV-файл"
+              aria-label="Вибрати CSV-файл"
               onClick={() => inputRef.current?.click()}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
@@ -241,14 +241,14 @@ export function ImportDialog({
                 className="size-8 text-muted-foreground"
               />
               <div className="flex flex-col items-center gap-1">
-                <p className="text-sm font-medium">Перетащите CSV сюда</p>
+                <p className="text-sm font-medium">Перетягніть CSV сюди</p>
                 <p className="text-xs text-muted-foreground">
-                  или нажмите, чтобы выбрать файл из папки
+                  або натисніть, щоб вибрати файл із папки
                 </p>
               </div>
               <span className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium">
                 <HugeiconsIcon icon={FileImportIcon} className="size-4" />
-                Выбрать файл
+                Вибрати файл
               </span>
               <input
                 ref={inputRef}
@@ -272,7 +272,7 @@ export function ImportDialog({
                   className="self-start"
                   onClick={reset}
                 >
-                  Попробовать снова
+                  Спробувати знову
                 </Button>
               </div>
             ) : null}
@@ -280,27 +280,27 @@ export function ImportDialog({
         ) : (
           <div className="flex flex-col gap-3 rounded-xl border p-5">
             <Step
-              label="Группировка по фото"
+              label="Групування за фото"
               active={stage === "grouping"}
               done={stage === "saving" || stage === "cleaning" || stage === "done"}
             />
             <Step
-              label="Сохранение файла"
+              label="Збереження файлу"
               active={stage === "saving"}
               done={stage === "cleaning" || stage === "done"}
             />
             <Step
-              label="Очистка названий и проверка моделей"
+              label="Очищення назв і перевірка моделей"
               active={stage === "cleaning"}
               done={stage === "done"}
               detail={
                 cleanupProgress
-                  ? `Обработано ${cleanupProgress.done} из ${cleanupProgress.total}`
+                  ? `Оброблено ${cleanupProgress.done} з ${cleanupProgress.total}`
                   : undefined
               }
             />
             <p className="pt-1 text-xs text-muted-foreground">
-              Не закрывайте окно, пока идёт обработка.
+              Не закривайте вікно, поки триває обробка.
             </p>
           </div>
         )}

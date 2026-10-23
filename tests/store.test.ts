@@ -280,7 +280,7 @@ test("store: импорт, переименование, перенос, уда�
   const datasetsBefore = state.datasets.length;
   await assert.rejects(
     useAppStore.getState().importFile("empty.csv", "goods_id\n"),
-    /не найдено/,
+    /не знайдено/,
   );
   assert.equal(useAppStore.getState().datasets.length, datasetsBefore);
 });

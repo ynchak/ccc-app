@@ -26,7 +26,7 @@ async function readError(response: Response): Promise<string> {
   } catch {
     // ignore
   }
-  return "Ошибка проверки моделей";
+  return "Помилка перевірки моделей";
 }
 
 export async function fetchJevStatus(): Promise<JevStatus> {
@@ -35,7 +35,7 @@ export async function fetchJevStatus(): Promise<JevStatus> {
     cache: "no-store",
   });
   if (response.status === 503) {
-    throw new JevNotConfiguredError("Jev не настроен");
+    throw new JevNotConfiguredError("Jev не налаштований");
   }
   if (!response.ok) {
     throw new JevRequestError(await readError(response), response.status);
@@ -58,10 +58,10 @@ export async function matchPairsBatch(
   });
 
   if (response.status === 401) {
-    throw new JevRequestError("Сессия истекла. Войдите снова.", 401);
+    throw new JevRequestError("Сесія завершилася. Увійдіть знову.", 401);
   }
   if (response.status === 503) {
-    throw new JevNotConfiguredError("Jev не настроен");
+    throw new JevNotConfiguredError("Jev не налаштований");
   }
   if (!response.ok) {
     throw new JevRequestError(await readError(response), response.status);
