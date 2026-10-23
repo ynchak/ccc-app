@@ -95,12 +95,7 @@ export const ProductCard = memo(function ProductCard({
       }`}
     >
       <div className="relative aspect-square w-full overflow-hidden bg-muted">
-        <button
-          type="button"
-          className="absolute inset-0 flex items-center justify-center p-2"
-          onClick={() => onDetails(product)}
-          aria-label={`Открыть товар ${product.goodsTitle}`}
-        >
+        <div className="absolute inset-0 flex items-center justify-center p-2">
           {currentImage && !imageFailed ? (
             <span className="relative block h-full w-full">
               <Image
@@ -120,7 +115,7 @@ export const ProductCard = memo(function ProductCard({
               {images.length === 0 ? "Нет фото" : "Фото не загрузилось"}
             </div>
           )}
-        </button>
+        </div>
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between p-2">
           <div className="pointer-events-auto rounded-md bg-background/90 p-1 shadow-sm backdrop-blur">
@@ -230,18 +225,12 @@ export const ProductCard = memo(function ProductCard({
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-3">
-        <button
-          type="button"
-          className="text-left"
-          onClick={() => onDetails(product)}
+        <p
+          className="text-xs leading-snug font-medium break-words"
+          title={product.goodsTitle}
         >
-          <p
-            className="text-xs leading-snug font-medium break-words hover:underline hover:decoration-dotted hover:underline-offset-4"
-            title={product.goodsTitle}
-          >
-            {product.goodsTitle}
-          </p>
-        </button>
+          {product.goodsTitle}
+        </p>
 
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-md border bg-muted/30 px-2.5 py-2 text-xs">
           <dt className="text-muted-foreground">Бренд</dt>
@@ -293,6 +282,16 @@ export const ProductCard = memo(function ProductCard({
         ) : null}
 
         <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={() => onDetails(product)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <HugeiconsIcon icon={InformationCircleIcon} data-icon="inline-start" />
+            Детали
+          </Button>
+
           {gomerUrl ? (
             <a
               href={gomerUrl}

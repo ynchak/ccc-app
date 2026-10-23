@@ -22,14 +22,12 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { Product } from "@/lib/types";
 
-/** Одна строка атрибута. */
-function Field({ label, value }: { label: string; value: string | null }) {
+/** Одна строка заполненного атрибута. */
+function Field({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b py-2 text-sm last:border-b-0 sm:border-b-0 sm:py-1.5">
       <span className="shrink-0 text-muted-foreground">{label}</span>
-      <span className="text-right break-words">
-        {value ? value : <span className="text-muted-foreground/60">—</span>}
-      </span>
+      <span className="text-right break-words">{value}</span>
     </div>
   );
 }
@@ -120,6 +118,24 @@ export function ProductDetailsDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const fields = product
+    ? [
+        { label: "Артикул", value: product.goodsArticle },
+        { label: "Бренд", value: product.producersTitle },
+        { label: "Продавец", value: product.sellerTitle },
+        { label: "Категория", value: product.categoryTitle },
+        { label: "Размер", value: product.size },
+        { label: "Цвет", value: product.color },
+        { label: "Рост", value: product.height },
+        { label: "EAN", value: product.ean },
+        { label: "МДГ", value: product.mdg },
+      ].filter(
+        (field): field is { label: string; value: string } =>
+          typeof field.value === "string" && field.value.trim().length > 0,
+      )
+    : [];
+  const description = product?.description?.trim() ?? "";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain sm:max-w-2xl">
@@ -136,29 +152,29 @@ export function ProductDetailsDialog({
               title={product.goodsTitle}
             />
 
-            <div className="grid gap-x-6 sm:grid-cols-2">
-              <div>
-                <Field label="Артикул" value={product.goodsArticle} />
-                <Field label="Бренд" value={product.producersTitle} />
-                <Field label="Продавец" value={product.sellerTitle} />
-                <Field label="Категория" value={product.categoryTitle} />
+            {fields.length > 0 ? (
+              <div className="grid gap-x-6 sm:grid-cols-2">
+                {fields.map((field) => (
+                  <Field
+                    key={field.label}
+                    label={field.label}
+                    value={field.value}
+                  />
+                ))}
               </div>
-              <div>
-                <Field label="Размер" value={product.size} />
-                <Field label="Цвет" value={product.color} />
-                <Field label="Рост" value={product.height} />
-                <Field label="EAN" value={product.ean} />
-                <Field label="МДГ" value={product.mdg} />
-              </div>
-            </div>
+            ) : null}
 
-            <Separator />
-            <div className="flex flex-col gap-1 pb-2">
-              <span className="text-sm text-muted-foreground">Описание</span>
-              <p className="text-sm leading-relaxed whitespace-pre-line">
-                {product.description || "Описание отсутствует."}
-              </p>
-            </div>
+            {description ? (
+              <>
+                <Separator />
+                <div className="flex flex-col gap-1 pb-2">
+                  <span className="text-sm text-muted-foreground">Описание</span>
+                  <p className="text-sm leading-relaxed whitespace-pre-line">
+                    {description}
+                  </p>
+                </div>
+              </>
+            ) : null}
           </div>
         ) : null}
 
