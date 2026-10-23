@@ -6,6 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ComputerIcon,
   Moon02Icon,
+  Note02Icon,
   Sun03Icon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
@@ -19,15 +20,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type ThemeValue = "system" | "light" | "dark";
+type ThemeValue = "system" | "light" | "paper" | "dark";
 
 const THEME_LABELS: Record<ThemeValue, string> = {
   system: "Системна",
   light: "Світла",
+  paper: "Папір",
   dark: "Темна",
 };
-
-
 
 const LIGHT_OLD_THEMES = new Set([
   "light",
@@ -66,7 +66,10 @@ export function ThemeSelect() {
   const { theme, setTheme } = useTheme();
   const mounted = useMounted();
   const value: ThemeValue =
-    mounted && (theme === "light" || theme === "dark") ? theme : "system";
+    mounted &&
+    (theme === "light" || theme === "paper" || theme === "dark")
+      ? theme
+      : "system";
   const title = `Тема: ${THEME_LABELS[value]}`;
 
   // Миграция со старых наборов тем.
@@ -90,7 +93,12 @@ export function ThemeSelect() {
       ).matches;
       let target: ThemeValue = "light";
 
-      if (stored === "system" || stored === "light" || stored === "dark") {
+      if (
+        stored === "system" ||
+        stored === "light" ||
+        stored === "paper" ||
+        stored === "dark"
+      ) {
         target = stored;
       } else if (stored === "soft") {
         target = "light";
@@ -125,15 +133,17 @@ export function ThemeSelect() {
           icon={
             value === "dark"
               ? Moon02Icon
-              : value === "light"
-                ? Sun03Icon
-                : ComputerIcon
+              : value === "paper"
+                ? Note02Icon
+                : value === "light"
+                  ? Sun03Icon
+                  : ComputerIcon
           }
         />
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="end" className="min-w-52">
         <DropdownMenuGroup>
-          {(["system", "light", "dark"] as const).map((themeValue) => (
+          {(["system", "light", "paper", "dark"] as const).map((themeValue) => (
             <DropdownMenuItem
               key={themeValue}
               onClick={() => setTheme(themeValue)}
@@ -148,9 +158,11 @@ export function ThemeSelect() {
                   icon={
                     themeValue === "system"
                       ? ComputerIcon
-                      : themeValue === "light"
-                        ? Sun03Icon
-                        : Moon02Icon
+                      : themeValue === "paper"
+                        ? Note02Icon
+                        : themeValue === "light"
+                          ? Sun03Icon
+                          : Moon02Icon
                   }
                   className="size-3.5"
                 />
