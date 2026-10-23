@@ -15,6 +15,7 @@ import {
   UnfoldMoreIcon,
 } from "@hugeicons/core-free-icons";
 
+import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -232,23 +233,30 @@ export const ProductCard = memo(function ProductCard({
           {product.goodsTitle}
         </p>
 
+        {product.producersTitle || product.sellerTitle ? (
+          <div className="flex flex-wrap gap-1">
+            {product.producersTitle ? (
+              <Badge
+                variant="secondary"
+                className="max-w-full text-[11px]"
+                title={`Бренд: ${product.producersTitle}`}
+              >
+                {product.producersTitle}
+              </Badge>
+            ) : null}
+            {product.sellerTitle ? (
+              <Badge
+                variant="outline"
+                className="max-w-full text-[11px] text-muted-foreground"
+                title={`Продавец: ${product.sellerTitle}`}
+              >
+                {product.sellerTitle}
+              </Badge>
+            ) : null}
+          </div>
+        ) : null}
+
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-md border bg-muted/30 px-2.5 py-2 text-xs">
-          <dt className="text-muted-foreground">Бренд</dt>
-          <dd
-            className="truncate text-foreground"
-            title={product.producersTitle || "—"}
-          >
-            {product.producersTitle || "—"}
-          </dd>
-
-          <dt className="text-muted-foreground">Продавец</dt>
-          <dd
-            className="truncate text-foreground"
-            title={product.sellerTitle || "—"}
-          >
-            {product.sellerTitle || "—"}
-          </dd>
-
           <dt className="text-muted-foreground">Размер</dt>
           <dd className="truncate text-foreground" title={product.size ?? "—"}>
             {product.size || "—"}
