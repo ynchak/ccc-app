@@ -5,10 +5,14 @@ import Image from "next/image";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowDown01Icon,
-  ExternalLinkIcon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
   GroupLayersIcon,
   ImageNotFound01Icon,
+  ZoomInAreaIcon,
 } from "@hugeicons/core-free-icons";
+
+import { ProductImageLightbox } from "@/components/groups/product-image-lightbox";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,26 +39,109 @@ function percent(value: number): string {
   return `${Math.round(value * 100)}%`;
 }
 
-function Thumbnail({ src, title }: { src: string; title: string }) {
-  const [failed, setFailed] = useState(false);
+
+
+function ComparisonGallery({
+  images,
+  title,
+}: {
+  images: string[];
+  title: string;
+}) {
+  const [index, setIndex] = useState(0);
+  const [failed, setFailed] = useState<Set<string>>(new Set());
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const safeIndex = images.length > 0 ? index % images.length : 0;
+  const current = images[safeIndex];
+  const imageFailed = current ? failed.has(current) : false;
+
+  const showPrev = () => {
+    if (images.length < 2) return;
+    setIndex((value) => (value - 1 + images.length) % images.length);
+  };
+
+  const showNext = () => {
+    if (images.length < 2) return;
+    setIndex((value) => (value + 1) % images.length);
+  };
 
   return (
-    <div className="relative aspect-square overflow-hidden rounded-md bg-muted">
-      {failed ? (
-        <div className="flex h-full items-center justify-center text-muted-foreground">
-          <HugeiconsIcon icon={ImageNotFound01Icon} className="size-4" />
-        </div>
+    <div className="relative mt-2 aspect-[4/3] overflow-hidden rounded-md bg-muted">
+      {current && !imageFailed ? (
+        <button
+          type="button"
+          onClick={() => setLightboxOpen(true)}
+          className="absolute inset-0 flex cursor-zoom-in items-center justify-center"
+          aria-label="Збільшити фото"
+          title="Натисніть, щоб збільшити"
+        >
+          <Image
+            src={current}
+            alt={title}
+            fill
+            sizes="(max-width: 640px) 100vw, 480px"
+            className="object-cover"
+            unoptimized
+            onError={() =>
+              setFailed((values) => {
+                const next = new Set(values);
+                next.add(current);
+                return next;
+              })
+            }
+          />
+        </button>
       ) : (
-        <Image
-          src={src}
-          alt={title}
-          fill
-          sizes="160px"
-          className="object-cover"
-          unoptimized
-          onError={() => setFailed(true)}
-        />
+        <div className="flex h-full items-center justify-center text-muted-foreground">
+          <HugeiconsIcon icon={ImageNotFound01Icon} className="size-5" />
+        </div>
       )}
+
+      {current && !imageFailed ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(true)}
+            className="absolute top-2 right-2 z-10 flex size-7 items-center justify-center rounded-full border border-border/60 bg-background/95 text-muted-foreground"
+            aria-label="Збільшити фото"
+            title="Збільшити фото"
+          >
+            <HugeiconsIcon icon={ZoomInAreaIcon} className="size-3.5" />
+          </button>
+          {images.length > 1 ? (
+            <>
+              <button
+                type="button"
+                onClick={showPrev}
+                className="absolute top-1/2 left-2 z-10 flex size-7 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/95 text-foreground"
+                aria-label="Попереднє фото"
+              >
+                <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={showNext}
+                className="absolute top-1/2 right-2 z-10 flex size-7 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/95 text-foreground"
+                aria-label="Наступне фото"
+              >
+                <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" />
+              </button>
+              <span className="pointer-events-none absolute bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full border border-border/60 bg-background/95 px-2 py-0.5 text-[11px] text-muted-foreground">
+                {safeIndex + 1} / {images.length}
+              </span>
+            </>
+          ) : null}
+        </>
+      ) : null}
+
+      {lightboxOpen && images.length > 0 ? (
+        <ProductImageLightbox
+          images={images}
+          title={title}
+          initialIndex={safeIndex}
+          onClose={() => setLightboxOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -71,13 +158,7 @@ function Values({ label, values }: { label: string; values: string[] }) {
   );
 }
 
-function Side({
-  side,
-  onOpen,
-}: {
-  side: ComparisonSide;
-  onOpen: (groupId: number) => void;
-}) {
+function Side({ side }: { side: ComparisonSide }) {
   return (
     <div className="min-w-0 rounded-lg bg-muted/30 p-3">
       <div className="flex min-w-0 items-start gap-2">
@@ -89,32 +170,11 @@ function Side({
         </p>
       </div>
 
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="text-xs text-muted-foreground">
-          {productsLabel(side.count)}
-        </span>
-        <Button
-          variant="ghost"
-          size="xs"
-          onClick={() => onOpen(side.id)}
-          title="Відкрити групу в списку"
-        >
-          <HugeiconsIcon icon={ExternalLinkIcon} data-icon="inline-start" />
-          Відкрити
-        </Button>
-      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        {productsLabel(side.count)}
+      </p>
 
-      {side.images.length > 0 ? (
-        <div className="mt-2 grid grid-cols-3 gap-1.5">
-          {side.images.map((image) => (
-            <Thumbnail key={image} src={image} title={side.title} />
-          ))}
-        </div>
-      ) : (
-        <div className="mt-2 flex h-20 items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground">
-          Немає фото
-        </div>
-      )}
+      <ComparisonGallery images={side.images} title={side.title} />
 
       <dl className="mt-3 flex flex-col gap-2">
         <Values label="Бренд" values={side.brands} />
@@ -208,11 +268,9 @@ function Evidence({ comparison }: { comparison: GroupComparison }) {
 export function MergeSuggestionsDialog({
   open,
   onOpenChange,
-  onOpenGroup,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onOpenGroup: (groupId: number) => void;
 }) {
   const groups = useAppStore((s) => s.groups);
   const products = useAppStore((s) => s.products);
@@ -359,8 +417,8 @@ export function MergeSuggestionsDialog({
                   {isExpanded ? (
                     <div className="border-t bg-background/40 p-3">
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <Side side={comparison.a} onOpen={onOpenGroup} />
-                        <Side side={comparison.b} onOpen={onOpenGroup} />
+                        <Side side={comparison.a} />
+                        <Side side={comparison.b} />
                       </div>
                       <Evidence comparison={comparison} />
                     </div>
