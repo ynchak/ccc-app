@@ -29,7 +29,7 @@ const THEME_LABELS: Record<ThemeValue, string> = {
 
 const THEME_SWATCHES: Record<"light" | "dark", { bg: string; fg: string }> = {
   light: { bg: "#faf4ed", fg: "#286983" },
-  dark: { bg: "#232136", fg: "#c4a7e7" },
+  dark: { bg: "#12110f", fg: "#a8b5a2" },
 };
 
 const LIGHT_OLD_THEMES = new Set([
@@ -152,9 +152,10 @@ export function ThemeSelect() {
                 </span>
               ) : (
                 <span
-                  className="size-4 shrink-0 rounded-full border border-foreground/15"
+                  className="size-4 shrink-0 rounded-full border-2"
                   style={{
-                    background: `linear-gradient(135deg, ${THEME_SWATCHES[themeValue].bg} 50%, ${THEME_SWATCHES[themeValue].fg} 50%)`,
+                    backgroundColor: THEME_SWATCHES[themeValue].bg,
+                    borderColor: THEME_SWATCHES[themeValue].fg,
                   }}
                 />
               )}
