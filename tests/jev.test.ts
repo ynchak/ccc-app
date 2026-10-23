@@ -86,6 +86,33 @@ test("кандидаты: общий код модели внутри катег
   );
 });
 
+test("кандидаты: общая часть артикула связывает разные названия", () => {
+  const products = new Map<number, Product>([
+    [
+      1,
+      product(1, {
+        goodsTitle: "Куртка Zara 18738 синяя",
+        goodsArticle: "4302207-navyblue-XXL",
+      }),
+    ],
+    [
+      2,
+      product(2, {
+        goodsTitle: "Куртка Zara 18743 серая",
+        goodsArticle: "4302207-stone-L",
+      }),
+    ],
+  ]);
+  const groups = [group(1, [1]), group(2, [2])];
+  const first = buildJevGroupProfile(groups[0], products);
+  const second = buildJevGroupProfile(groups[1], products);
+  assert.equal(first?.articleBase, "4302207");
+  assert.equal(second?.articleBase, "4302207");
+
+  const pairs = generateCandidatePairs(groups, products);
+  assert.equal(pairs.length, 1);
+});
+
 test("кандидаты: разные бренды и категории не сравниваются", () => {
   const products = new Map<number, Product>([
     [1, product(1, { goodsTitle: "Пальто ISSA PLUS 15946" })],

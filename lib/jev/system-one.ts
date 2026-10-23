@@ -1,6 +1,6 @@
 import type { JevPair, JevPairResult } from "@/lib/jev/types";
 
-export const JEV_PROMPT_VERSION = "jev-same-model-v1";
+export const JEV_PROMPT_VERSION = "jev-same-model-v2";
 export const DEFAULT_JEV_MODEL = "typesafe/jev-1.14";
 
 interface JevQuestion {
@@ -24,6 +24,7 @@ function compactPair(pair: JevPair) {
       brand: pair.a.brand ?? "",
       mdg: pair.a.mdg ?? "",
       article: pair.a.article ?? "",
+      articleBase: pair.a.articleBase ?? "",
       examples: pair.a.examples ?? [],
     },
     b: {
@@ -33,6 +34,7 @@ function compactPair(pair: JevPair) {
       brand: pair.b.brand ?? "",
       mdg: pair.b.mdg ?? "",
       article: pair.b.article ?? "",
+      articleBase: pair.b.articleBase ?? "",
       examples: pair.b.examples ?? [],
     },
   };
@@ -62,7 +64,7 @@ export function buildJevRequestBody(
     };
     questions[`pair_${index}_model`] = {
       type: "noul",
-      instructions: `Do \`${path}.a\` and \`${path}.b\` represent variants of the same manufacturer model, differing only in color, size, height, or listing wording? A shared model code is strong evidence. A different \`mdg\` or \`article\` alone is not evidence against the same model, because those identifiers may be variant-specific.`,
+      instructions: `Do \`${path}.a\` and \`${path}.b\` represent variants of the same manufacturer model, differing only in color, size, height, or listing wording? A shared model code or a shared \`articleBase\` before the variant suffix is strong evidence. A different \`mdg\` or full \`article\` alone is not evidence against the same model, because those identifiers may be variant-specific.`,
       criteria: {
         true: "The profiles are the same product model; color, size, height, or wording may differ.",
         false: "The profiles are different product models, or the evidence is insufficient.",

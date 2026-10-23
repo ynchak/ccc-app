@@ -59,6 +59,7 @@ function readProfile(value: unknown): JevGroupProfile | null {
     brand: text("brand"),
     mdg: text("mdg"),
     article: text("article"),
+    articleBase: text("articleBase"),
     examples,
   };
 }

@@ -9,6 +9,8 @@ export interface JevGroupProfile {
   brand?: string;
   mdg?: string;
   article?: string;
+  /** Общая часть артикула без вариантного суффикса, если её можно выделить. */
+  articleBase?: string;
   examples?: string[];
 }
 

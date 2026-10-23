@@ -44,6 +44,29 @@ function addModelKeys(
   }
 }
 
+/**
+ * Выделяет общую часть артикула.
+ *
+ * В выгрузках артикул часто состоит из кода модели и вариантного суффикса:
+ * `4302207-navyblue-XXL` → `4302207`. Если суффиксов нет, возвращаем артикул
+ * целиком — тогда он хотя бы может совпасть точно.
+ */
+export function articleBase(article: string | null | undefined): string | undefined {
+  const value = article?.trim();
+  if (!value) return undefined;
+  const parts = value.split(/[-_/]+/).filter(Boolean);
+  if (parts.length <= 1) return value.length >= 4 ? value : undefined;
+
+  let base = parts[0];
+  for (let index = 1; index < parts.length; index++) {
+    if (/\d/.test(parts[index])) {
+      base = `${base}-${parts[index]}`;
+      break;
+    }
+  }
+  return base.length >= 4 ? base : undefined;
+}
+
 /** Ключи, которые с большой вероятностью являются кодом модели. */
 function modelKeysFor(profile: JevGroupProfile): Set<string> {
   const keys = new Set<string>();
@@ -62,6 +85,10 @@ function modelKeysFor(profile: JevGroupProfile): Set<string> {
   if (profile.article) {
     const article = normalize(profile.article);
     if (article.length >= 4) keys.add(article);
+  }
+  if (profile.articleBase) {
+    const base = normalize(profile.articleBase);
+    if (base.length >= 4) keys.add(base);
   }
 
   return keys;
@@ -112,6 +139,7 @@ export function buildJevGroupProfile(
     brand,
     mdg,
     article,
+    articleBase: articleBase(article),
     examples: examples.length > 0 ? examples : undefined,
   };
 }
