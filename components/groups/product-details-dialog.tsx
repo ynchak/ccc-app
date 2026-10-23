@@ -1,12 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type WheelEvent as ReactWheelEvent,
+} from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
+  Cancel01Icon,
   ImageNotFound01Icon,
+  Refresh01Icon,
+  ZoomInAreaIcon,
+  ZoomOutIcon,
 } from "@hugeicons/core-free-icons";
 
 import {
@@ -32,23 +43,51 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Слайдер фотографий товара. */
+/** Слайдер и полноэкранный просмотр фотографий с зумом. */
 function ProductGallery({ images, title }: { images: string[]; title: string }) {
   const [imageIndex, setImageIndex] = useState(0);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+  } | null>(null);
 
   const safeIndex = images.length > 0 ? imageIndex % images.length : 0;
   const currentImage = images[safeIndex];
   const imageFailed = currentImage ? failedImages.has(currentImage) : false;
 
+  const resetZoom = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  const setZoomLevel = (next: number) => {
+    const value = Math.min(4, Math.max(1, next));
+    setZoom(value);
+    if (value <= 1) setPan({ x: 0, y: 0 });
+  };
+
+  const closeZoom = () => {
+    setIsZoomed(false);
+    resetZoom();
+    dragRef.current = null;
+  };
+
   const showPrev = () => {
     if (images.length < 2) return;
     setImageIndex((index) => (index - 1 + images.length) % images.length);
+    resetZoom();
   };
 
   const showNext = () => {
     if (images.length < 2) return;
     setImageIndex((index) => (index + 1) % images.length);
+    resetZoom();
   };
 
   const handleError = () => {
@@ -60,24 +99,93 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
     });
   };
 
+  const handleWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setZoomLevel(zoom + (event.deltaY < 0 ? 0.25 : -0.25));
+  };
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (zoom <= 1) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: pan.x,
+      originY: pan.y,
+    };
+  };
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    setPan({
+      x: drag.originX + event.clientX - drag.startX,
+      y: drag.originY + event.clientY - drag.startY,
+    });
+  };
+
+  const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    dragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  useEffect(() => {
+    if (!isZoomed) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsZoomed(false);
+        setZoom(1);
+        setPan({ x: 0, y: 0 });
+        dragRef.current = null;
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isZoomed]);
+
   return (
-    <div className="relative h-72 w-full overflow-hidden rounded-lg bg-muted sm:h-80">
+    <div className="relative h-72 w-full overflow-hidden rounded-lg bg-muted sm:h-full sm:min-h-80">
       {currentImage && !imageFailed ? (
-        <Image
-          src={currentImage}
-          alt={title}
-          fill
-          sizes="(max-width: 640px) 100vw, 640px"
-          className="object-contain"
-          unoptimized
-          onError={handleError}
-        />
+        <button
+          type="button"
+          onClick={() => setIsZoomed(true)}
+          className="absolute inset-0 flex cursor-zoom-in items-center justify-center p-2"
+          aria-label="Увеличить фото"
+          title="Нажмите, чтобы увеличить"
+        >
+          <span className="relative block h-full w-full">
+            <Image
+              src={currentImage}
+              alt={title}
+              fill
+              sizes="(max-width: 640px) 100vw, 640px"
+              className="object-contain"
+              unoptimized
+              draggable={false}
+              onError={handleError}
+            />
+          </span>
+        </button>
       ) : (
         <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
           <HugeiconsIcon icon={ImageNotFound01Icon} className="size-8" />
           {images.length === 0 ? "Нет фото" : "Фото не загрузилось"}
         </div>
       )}
+
+      {currentImage && !imageFailed ? (
+        <button
+          type="button"
+          onClick={() => setIsZoomed(true)}
+          className="absolute top-3 right-3 z-10 flex size-8 items-center justify-center rounded-full bg-background/90 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:text-foreground"
+          aria-label="Увеличить фото"
+          title="Увеличить фото"
+        >
+          <HugeiconsIcon icon={ZoomInAreaIcon} className="size-4" />
+        </button>
+      ) : null}
 
       {images.length > 1 ? (
         <>
@@ -102,6 +210,126 @@ function ProductGallery({ images, title }: { images: string[]; title: string }) 
           </span>
         </>
       ) : null}
+
+      {isZoomed && currentImage && !imageFailed && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Просмотр фото"
+              onClick={closeZoom}
+            >
+              <button
+                type="button"
+                onClick={closeZoom}
+                className="absolute top-4 right-4 z-20 flex size-9 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+                aria-label="Закрыть просмотр"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} className="size-5" />
+              </button>
+
+              <div
+                className={`relative h-[90vh] w-[90vw] touch-none overflow-hidden ${
+                  zoom > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"
+                }`}
+                onClick={(event) => event.stopPropagation()}
+                onWheel={handleWheel}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+                onDoubleClick={() =>
+                  zoom > 1 ? resetZoom() : setZoomLevel(2)
+                }
+              >
+                <div
+                  className="relative h-full w-full"
+                  style={{
+                    transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
+                  }}
+                >
+                  <Image
+                    src={currentImage}
+                    alt={title}
+                    fill
+                    sizes="90vw"
+                    className="pointer-events-none object-contain select-none"
+                    unoptimized
+                    draggable={false}
+                  />
+                </div>
+              </div>
+
+              {images.length > 1 ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      showPrev();
+                    }}
+                    className="absolute top-1/2 left-4 z-20 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+                    aria-label="Предыдущее фото"
+                  >
+                    <HugeiconsIcon icon={ArrowLeft01Icon} className="size-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      showNext();
+                    }}
+                    className="absolute top-1/2 right-4 z-20 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+                    aria-label="Следующее фото"
+                  >
+                    <HugeiconsIcon icon={ArrowRight01Icon} className="size-5" />
+                  </button>
+                  <span className="pointer-events-none absolute top-4 left-1/2 z-20 -translate-x-1/2 rounded-full bg-white/10 px-2.5 py-1 text-xs text-white">
+                    {safeIndex + 1} / {images.length}
+                  </span>
+                </>
+              ) : null}
+
+              <div
+                className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full bg-black/55 p-1 text-white backdrop-blur"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel(zoom - 0.5)}
+                  disabled={zoom <= 1}
+                  className="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/15 disabled:opacity-40"
+                  aria-label="Уменьшить"
+                >
+                  <HugeiconsIcon icon={ZoomOutIcon} className="size-4" />
+                </button>
+                <span className="min-w-12 text-center text-xs tabular-nums">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel(zoom + 0.5)}
+                  disabled={zoom >= 4}
+                  className="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/15 disabled:opacity-40"
+                  aria-label="Увеличить"
+                >
+                  <HugeiconsIcon icon={ZoomInAreaIcon} className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={resetZoom}
+                  disabled={zoom === 1 && pan.x === 0 && pan.y === 0}
+                  className="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/15 disabled:opacity-40"
+                  aria-label="Сбросить масштаб"
+                >
+                  <HugeiconsIcon icon={Refresh01Icon} className="size-4" />
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
@@ -138,43 +366,47 @@ export function ProductDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain sm:max-w-2xl">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>Детали товара</DialogTitle>
           <DialogDescription>{product?.goodsTitle ?? ""}</DialogDescription>
         </DialogHeader>
 
         {product ? (
-          <div className="flex flex-col gap-4">
+          <div className="grid gap-5 sm:grid-cols-2">
             <ProductGallery
               key={product.id}
               images={product.imageUrls}
               title={product.goodsTitle}
             />
 
-            {fields.length > 0 ? (
-              <div className="grid gap-x-6 sm:grid-cols-2">
-                {fields.map((field) => (
-                  <Field
-                    key={field.label}
-                    label={field.label}
-                    value={field.value}
-                  />
-                ))}
-              </div>
-            ) : null}
-
-            {description ? (
-              <>
-                <Separator />
-                <div className="flex flex-col gap-1 pb-2">
-                  <span className="text-sm text-muted-foreground">Описание</span>
-                  <p className="text-sm leading-relaxed whitespace-pre-line">
-                    {description}
-                  </p>
+            <div className="flex min-w-0 flex-col gap-4">
+              {fields.length > 0 ? (
+                <div className="flex flex-col">
+                  {fields.map((field) => (
+                    <Field
+                      key={field.label}
+                      label={field.label}
+                      value={field.value}
+                    />
+                  ))}
                 </div>
-              </>
-            ) : null}
+              ) : null}
+
+              {description ? (
+                <>
+                  <Separator />
+                  <div className="flex flex-col gap-1 pb-2">
+                    <span className="text-sm text-muted-foreground">
+                      Описание
+                    </span>
+                    <p className="text-sm leading-relaxed whitespace-pre-line">
+                      {description}
+                    </p>
+                  </div>
+                </>
+              ) : null}
+            </div>
           </div>
         ) : null}
 
