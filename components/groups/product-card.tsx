@@ -308,7 +308,7 @@ export const ProductCard = memo(function ProductCard({
               rel="noreferrer"
               className={cn(
                 buttonVariants({ variant: "outline", size: "xs" }),
-                "border-orange-500/30 bg-orange-500/5 text-orange-700/80 hover:bg-orange-500/10 hover:text-orange-700 dark:text-orange-300/80 dark:hover:text-orange-200",
+                "border-orange-500/30 bg-orange-500/15 text-orange-950 hover:bg-orange-500/25 hover:text-orange-950 dark:border-orange-400/30 dark:bg-orange-400/15 dark:text-orange-50 dark:hover:bg-orange-400/25",
               )}
               title="Открыть товар в Gomer"
             >
@@ -318,7 +318,7 @@ export const ProductCard = memo(function ProductCard({
             <span
               className={cn(
                 buttonVariants({ variant: "outline", size: "xs" }),
-                "cursor-default border-orange-500/20 bg-orange-500/5 text-orange-700/40 dark:text-orange-300/40",
+                "cursor-default border-orange-500/20 bg-orange-500/10 text-orange-950/50 dark:border-orange-400/20 dark:bg-orange-400/10 dark:text-orange-50/50",
               )}
               title="Нет gomer_sync_source_id"
             >
@@ -333,7 +333,7 @@ export const ProductCard = memo(function ProductCard({
               rel="noreferrer"
               className={cn(
                 buttonVariants({ variant: "outline", size: "xs" }),
-                "border-emerald-500/30 bg-emerald-500/5 text-emerald-700/80 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-300/80 dark:hover:text-emerald-200",
+                "border-emerald-500/30 bg-emerald-500/15 text-emerald-950 hover:bg-emerald-500/25 hover:text-emerald-950 dark:border-emerald-400/30 dark:bg-emerald-400/15 dark:text-emerald-50 dark:hover:bg-emerald-400/25",
               )}
               title="Открыть товар на Rozetka"
             >
