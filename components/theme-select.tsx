@@ -6,7 +6,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ComputerIcon,
   Moon02Icon,
-  Sun02Icon,
   Sun03Icon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
@@ -20,12 +19,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type ThemeValue = "system" | "light" | "sand" | "dark";
+type ThemeValue = "system" | "light" | "dark";
 
 const THEME_LABELS: Record<ThemeValue, string> = {
   system: "Системна",
   light: "Світла",
-  sand: "Пісок",
   dark: "Темна",
 };
 
@@ -67,7 +65,7 @@ export function ThemeSelect() {
   const mounted = useMounted();
   const value: ThemeValue =
     mounted &&
-    (theme === "light" || theme === "sand" || theme === "dark")
+    (theme === "light" || theme === "dark")
       ? theme
       : "system";
   const title = `Тема: ${THEME_LABELS[value]}`;
@@ -96,12 +94,11 @@ export function ThemeSelect() {
       if (
         stored === "system" ||
         stored === "light" ||
-        stored === "sand" ||
         stored === "dark"
       ) {
         target = stored;
-      } else if (stored === "paper") {
-        target = "sand";
+      } else if (stored === "paper" || stored === "sand") {
+        target = "light";
       } else if (stored === "soft") {
         target = "light";
       } else if (stored && DARK_OLD_THEMES.has(stored)) {
@@ -135,17 +132,15 @@ export function ThemeSelect() {
           icon={
             value === "dark"
               ? Moon02Icon
-              : value === "sand"
-                ? Sun02Icon
-                : value === "light"
-                  ? Sun03Icon
-                  : ComputerIcon
+              : value === "light"
+                ? Sun03Icon
+                : ComputerIcon
           }
         />
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="end" className="min-w-52">
         <DropdownMenuGroup>
-          {(["system", "light", "sand", "dark"] as const).map((themeValue) => (
+          {(["system", "light", "dark"] as const).map((themeValue) => (
             <DropdownMenuItem
               key={themeValue}
               onClick={() => setTheme(themeValue)}
@@ -160,11 +155,9 @@ export function ThemeSelect() {
                   icon={
                     themeValue === "system"
                       ? ComputerIcon
-                      : themeValue === "sand"
-                        ? Sun02Icon
-                        : themeValue === "light"
-                          ? Sun03Icon
-                          : Moon02Icon
+                      : themeValue === "light"
+                        ? Sun03Icon
+                        : Moon02Icon
                   }
                   className="size-3.5"
                 />
