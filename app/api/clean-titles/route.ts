@@ -104,8 +104,8 @@ export async function POST(request: NextRequest) {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer":
-          process.env.NEXT_PUBLIC_SITE_URL || "https://skladka.local",
-        "X-Title": "Skladka",
+          process.env.NEXT_PUBLIC_SITE_URL || "https://akin.local",
+        "X-Title": "Akin",
       },
       signal: controller.signal,
       body: JSON.stringify({
