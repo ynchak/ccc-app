@@ -150,6 +150,10 @@ export function AppShell() {
   const [isExporting, setIsExporting] = useState(false);
   const [isCleaningTitles, setIsCleaningTitles] = useState(false);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [pendingGroupId, setPendingGroupId] = useState<number | null>(null);
+  const [highlightedGroupId, setHighlightedGroupId] = useState<number | null>(
+    null,
+  );
   const [mergeGroupIds, setMergeGroupIds] = useState<number[] | null>(null);
   const [moveProductIds, setMoveProductIds] = useState<number[] | null>(null);
   const [detailsTarget, setDetailsTarget] = useState<Product | null>(null);
@@ -165,6 +169,27 @@ export function AppShell() {
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0 });
   }, [activeDatasetId, pageData.page, pageSize]);
+
+  useEffect(() => {
+    if (pendingGroupId === null) return;
+    const element = document.getElementById(`group-${pendingGroupId}`);
+    if (!element) return;
+    element.scrollIntoView({ behavior: "smooth", block: "start" });
+    const frame = window.requestAnimationFrame(() => {
+      setHighlightedGroupId(pendingGroupId);
+      setPendingGroupId(null);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [pendingGroupId, pageData.items]);
+
+  useEffect(() => {
+    if (highlightedGroupId === null) return;
+    const timeout = window.setTimeout(
+      () => setHighlightedGroupId(null),
+      1800,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [highlightedGroupId]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -338,6 +363,22 @@ export function AppShell() {
     }
     notify("Товари згруповано", "success");
   };
+
+  const handleOpenSuggestedGroup = useCallback(
+    (groupId: number) => {
+      setSuggestionsOpen(false);
+      const state = useAppStore.getState();
+      state.setSearch("");
+      state.setCategoryFilter(null);
+      state.setQuickFilter("all");
+      const index = state.orderedGroupIds.indexOf(groupId);
+      if (index !== -1) {
+        setPage(Math.floor(index / state.pageSize) + 1);
+      }
+      setPendingGroupId(groupId);
+    },
+    [setPage],
+  );
 
   const handleMergeGroup = useCallback((target: Group) => {
     setMergeGroupIds([target.id]);
@@ -539,6 +580,7 @@ export function AppShell() {
                           onDelete={setDeleteTarget}
                           onMoveProduct={handleMoveProduct}
                           onDetailsProduct={setDetailsTarget}
+                          highlighted={highlightedGroupId === group.id}
                         />
                       </Fragment>
                     );
@@ -567,6 +609,7 @@ export function AppShell() {
       <MergeSuggestionsDialog
         open={suggestionsOpen}
         onOpenChange={setSuggestionsOpen}
+        onOpenGroup={handleOpenSuggestedGroup}
       />
 
       <MergeGroupsDialog

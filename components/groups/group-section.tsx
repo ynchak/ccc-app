@@ -53,12 +53,14 @@ export const GroupSection = memo(function GroupSection({
   onDelete,
   onMoveProduct,
   onDetailsProduct,
+  highlighted = false,
 }: {
   group: Group;
   onMerge: (group: Group) => void;
   onDelete: (group: Group) => void;
   onMoveProduct: (product: Product) => void;
   onDetailsProduct: (product: Product) => void;
+  highlighted?: boolean;
 }) {
   const products = useGroupProducts(group);
   const isSelected = useAppStore((s) => s.selectedGroupIds.has(group.id));
@@ -208,6 +210,7 @@ export const GroupSection = memo(function GroupSection({
 
   return (
     <section
+      id={`group-${group.id}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={(event) => void handleDrop(event)}
@@ -217,7 +220,7 @@ export const GroupSection = memo(function GroupSection({
         size="sm"
         className={`gap-0 py-0 transition-colors ${
           isDragOver ? "bg-accent/30 ring-2 ring-foreground/30" : ""
-        }`}
+        } ${highlighted ? "ring-2 ring-ring/60" : ""}`}
       >
         <CardHeader className="border-b pt-3">
           <div className="flex items-center gap-2">
