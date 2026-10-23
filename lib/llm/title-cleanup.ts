@@ -50,6 +50,24 @@ export function tokenizeTitle(title: string): string[] {
   return title.trim().split(/\s+/).filter(Boolean);
 }
 
+const SIZE_LABEL_WORDS = new Set(["размер", "розмір", "size"]);
+
+/**
+ * Убирает служебные подписи размера перед отправкой в LLM.
+ *
+ * Удаляется только отдельное слово: «розмір», «розмір:», «(розмір)»,
+ * «size», но не «розмірний».
+ */
+export function normalizeTitleBeforeLlm(title: string): string {
+  return title
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((token) => !SIZE_LABEL_WORDS.has(normalizeToken(token)))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function normalizeToken(token: string): string {
   return token
     .toLowerCase()

@@ -34,7 +34,11 @@ import {
   cleanTitlesBatch,
   fetchCleanupStatus,
 } from "@/lib/llm/client";
-import type { CleanTitleInput, CleanTitleResult } from "@/lib/llm/title-cleanup";
+import {
+  normalizeTitleBeforeLlm,
+  type CleanTitleInput,
+  type CleanTitleResult,
+} from "@/lib/llm/title-cleanup";
 import { applySuggestedColors } from "@/lib/llm/color-suggestions";
 import { usageCost } from "@/lib/ai-cost";
 import { retryTransient } from "@/lib/retry";
@@ -1280,7 +1284,7 @@ export const useAppStore = create<AppState>()(
           const first = state.products.get(group.productIds[0]);
           return {
             id: String(group.id),
-            title: group.title,
+            title: normalizeTitleBeforeLlm(group.title),
             brand: first?.producersTitle || undefined,
             article: first?.goodsArticle || undefined,
             size: first?.size || undefined,

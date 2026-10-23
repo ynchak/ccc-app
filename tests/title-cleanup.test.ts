@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import {
   applyModelResults,
+  normalizeTitleBeforeLlm,
   tokenizeTitle,
   type CleanTitleInput,
   type ModelTitleResult,
@@ -203,4 +204,32 @@ test("«см» удаляется вместе с соседним размер�
     [model(shoes, { 5: "size", 6: "size", 7: "size", 8: "size" })],
   );
   assert.equal(result.title, "Женские кроссовки New Balance 327 (W32714Q)");
+});
+
+test("нормалізація прибирає підписи розміру перед LLM", () => {
+  assert.equal(
+    normalizeTitleBeforeLlm("Боді з відкритою спинкою шоколад розмір M HDSYR_839"),
+    "Боді з відкритою спинкою шоколад M HDSYR_839",
+  );
+  assert.equal(
+    normalizeTitleBeforeLlm("Боді з відкритою спинкою РОЗМІР: HDSYR_839"),
+    "Боді з відкритою спинкою HDSYR_839",
+  );
+  assert.equal(
+    normalizeTitleBeforeLlm("Боді з відкритою спинкою (size) S HDSYR_839"),
+    "Боді з відкритою спинкою S HDSYR_839",
+  );
+});
+
+test("нормалізація не чіпає слово «розмірний»", () => {
+  assert.equal(
+    normalizeTitleBeforeLlm("Розмірний одяг розмір M"),
+    "Розмірний одяг M",
+  );
+});
+
+test("назви, що відрізняються лише словом розмір, стають однаковими", () => {
+  const a = normalizeTitleBeforeLlm("Боді шоколад розмір M HDSYR_839");
+  const b = normalizeTitleBeforeLlm("Боді шоколад S HDSYR_839");
+  assert.equal(a.replace(" M ", " "), b.replace(" S ", " "));
 });
