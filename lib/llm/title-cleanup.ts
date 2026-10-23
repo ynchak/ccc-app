@@ -50,7 +50,8 @@ export function tokenizeTitle(title: string): string[] {
   return title.trim().split(/\s+/).filter(Boolean);
 }
 
-const SIZE_LABEL_WORDS = new Set(["размер", "розмір", "size"]);
+const SIZE_LABEL_RE =
+  /^(?:размер(?:ы|ов|ам|ами|ах|ом|е)?|розмір(?:и|ів|ам|ами|ах|ом|і)?|sizes?)$/u;
 
 /**
  * Убирает служебные подписи размера перед отправкой в LLM.
@@ -62,7 +63,7 @@ export function normalizeTitleBeforeLlm(title: string): string {
   return title
     .split(/\s+/)
     .filter(Boolean)
-    .filter((token) => !SIZE_LABEL_WORDS.has(normalizeToken(token)))
+    .filter((token) => !SIZE_LABEL_RE.test(normalizeToken(token)))
     .join(" ")
     .replace(/\s+/g, " ")
     .trim();
@@ -71,7 +72,7 @@ export function normalizeTitleBeforeLlm(title: string): string {
 function normalizeToken(token: string): string {
   return token
     .toLowerCase()
-    .replace(/^[("'«]+|[)"'»,.;:!?]+$/g, "");
+    .replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
 }
 
 function brandProtected(token: string, brand?: string): boolean {

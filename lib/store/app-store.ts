@@ -1478,7 +1478,9 @@ export const useAppStore = create<AppState>()(
         let cleanedCount = 0;
         for (const group of candidates) {
           const result = results.get(String(group.id));
-          const title = result?.title.trim();
+          const title = result
+            ? normalizeTitleBeforeLlm(result.title.trim())
+            : "";
           if (!title || title === group.title) continue;
           next.set(group.id, {
             ...group,

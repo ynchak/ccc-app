@@ -221,6 +221,25 @@ test("нормалізація прибирає підписи розміру п
   );
 });
 
+test("нормалізація прибирає форми розміру", () => {
+  assert.equal(
+    normalizeTitleBeforeLlm("Боді розміри M HDSYR_839"),
+    "Боді M HDSYR_839",
+  );
+  assert.equal(
+    normalizeTitleBeforeLlm("Боді розмірів M HDSYR_839"),
+    "Боді M HDSYR_839",
+  );
+  assert.equal(
+    normalizeTitleBeforeLlm("Боді размеры M HDSYR_839"),
+    "Боді M HDSYR_839",
+  );
+  assert.equal(
+    normalizeTitleBeforeLlm("Боді sizes M HDSYR_839"),
+    "Боді M HDSYR_839",
+  );
+});
+
 test("нормалізація не чіпає слово «розмірний»", () => {
   assert.equal(
     normalizeTitleBeforeLlm("Розмірний одяг розмір M"),
