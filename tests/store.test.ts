@@ -1,13 +1,14 @@
 import "fake-indexeddb/auto";
 
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import { test } from "node:test";
 
 import type { Group } from "@/lib/types";
-
-const FIXTURE = path.join(process.cwd(), "test-data.csv");
+import {
+  SYNTHETIC_CSV,
+  SYNTHETIC_GROUP_COUNT,
+  SYNTHETIC_PRODUCT_COUNT,
+} from "./fixtures";
 
 function productsInGroups(groups: Iterable<{ productIds: number[] }>): number {
   let count = 0;
@@ -17,14 +18,17 @@ function productsInGroups(groups: Iterable<{ productIds: number[] }>): number {
 
 test("store: импорт, переименование, перенос, удаление и undo", async () => {
   const { useAppStore } = await import("@/lib/store/app-store");
-  const text = fs.readFileSync(FIXTURE, "utf8");
+  const text = SYNTHETIC_CSV;
 
   await useAppStore.getState().importFile("test-data.csv", text);
   let state = useAppStore.getState();
 
-  assert.equal(state.products.size, 300);
-  assert.equal(state.groups.size, 68);
-  assert.equal(productsInGroups(state.groups.values()), 300);
+  assert.equal(state.products.size, SYNTHETIC_PRODUCT_COUNT);
+  assert.equal(state.groups.size, SYNTHETIC_GROUP_COUNT);
+  assert.equal(
+    productsInGroups(state.groups.values()),
+    SYNTHETIC_PRODUCT_COUNT,
+  );
 
   // Каждая группа получила сырой заголовок первого товара.
   for (const group of state.groups.values()) {
@@ -98,7 +102,10 @@ test("store: импорт, переименование, перенос, уда�
   assert.equal(renamed, true);
   state = useAppStore.getState();
   assert.equal(state.groups.size, beforeRenameCount - 1);
-  assert.equal(productsInGroups(state.groups.values()), 300);
+  assert.equal(
+    productsInGroups(state.groups.values()),
+    SYNTHETIC_PRODUCT_COUNT,
+  );
 
   // Отменяем переименование.
   assert.equal(await useAppStore.getState().undo(), true);
@@ -126,7 +133,10 @@ test("store: импорт, переименование, перенос, уда�
   );
   state = useAppStore.getState();
   assert.equal(state.productToGroup.get(movedProductId), target.id);
-  assert.equal(productsInGroups(state.groups.values()), 300);
+  assert.equal(
+    productsInGroups(state.groups.values()),
+    SYNTHETIC_PRODUCT_COUNT,
+  );
   assert.equal(await useAppStore.getState().undo(), true);
   state = useAppStore.getState();
   assert.notEqual(state.productToGroup.get(movedProductId), target.id);
@@ -174,7 +184,10 @@ test("store: импорт, переименование, перенос, уда�
   assert.equal(newGroup.title, splitProduct.goodsTitle);
   assert.equal(newGroup.number, maxNumberBeforeCreate + 1);
   assert.equal(oldGroup.productIds.includes(splitProductId), false);
-  assert.equal(productsInGroups(state.groups.values()), 300);
+  assert.equal(
+    productsInGroups(state.groups.values()),
+    SYNTHETIC_PRODUCT_COUNT,
+  );
 
   const titlesInCategory = [...state.groups.values()]
     .filter((group) => group.categoryId === splitProduct.categoryId)
@@ -197,11 +210,17 @@ test("store: импорт, переименование, перенос, уда�
   await useAppStore.getState().deleteGroup(groupToDelete.id);
   state = useAppStore.getState();
   assert.equal(state.groups.has(groupToDelete.id), false);
-  assert.equal(productsInGroups(state.groups.values()), 300);
+  assert.equal(
+    productsInGroups(state.groups.values()),
+    SYNTHETIC_PRODUCT_COUNT,
+  );
   assert.equal(await useAppStore.getState().undo(), true);
   state = useAppStore.getState();
   assert.equal(state.groups.has(groupToDelete.id), true);
-  assert.equal(productsInGroups(state.groups.values()), 300);
+  assert.equal(
+    productsInGroups(state.groups.values()),
+    SYNTHETIC_PRODUCT_COUNT,
+  );
 
   // Фильтры и размер страницы сохраняются для файла и восстанавливаются.
   const datasetId = state.activeDatasetId;
@@ -255,7 +274,7 @@ test("store: импорт, переименование, перенос, уда�
   assert.equal(state.datasets.length, 1);
   assert.equal(state.datasets.some((item) => item.id === second.datasetId), false);
   assert.equal(state.activeDatasetId, datasetId);
-  assert.equal(state.groups.size, 68);
+  assert.equal(state.groups.size, SYNTHETIC_GROUP_COUNT);
 
   // Файл без товаров не создаёт пустой датасет.
   const datasetsBefore = state.datasets.length;

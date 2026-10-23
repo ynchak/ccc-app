@@ -134,17 +134,28 @@ export function ImportDialog({
           "Файл загружен. LLM не настроена — названия оставлены как есть.",
           "error",
         );
-      } else if (result.failed > 0) {
-        notify(
-          `Файл загружен. Очищено названий: ${result.cleaned} из ${result.total}.`,
-          "error",
-        );
       } else {
+        const parts = [
+          result.cleaned > 0 ? `очищено названий: ${result.cleaned}` : null,
+          result.merged > 0 ? `объединено по названию: ${result.merged}` : null,
+          result.modelMerged > 0
+            ? `объединено по модели: ${result.modelMerged}`
+            : null,
+          result.suggestions.length > 0
+            ? `предложений: ${result.suggestions.length}`
+            : null,
+          result.failed > 0 ? `не обработано: ${result.failed}` : null,
+        ].filter(Boolean);
+        const message =
+          parts.length > 0
+            ? `Файл загружен: ${parts.join(", ")}.`
+            : "Файл загружен.";
+        const hasProblem = result.failed > 0 || result.jevFailed;
         notify(
-          `Названия очищены: ${result.cleaned} из ${result.total}${
-            result.merged > 0 ? `, объединено групп: ${result.merged}` : ""
-          }.`,
-          "success",
+          result.jevFailed
+            ? `${message} Jev не смог проверить модели.`
+            : message,
+          hasProblem ? "error" : "success",
         );
       }
 
@@ -277,7 +288,7 @@ export function ImportDialog({
               done={stage === "cleaning" || stage === "done"}
             />
             <Step
-              label="Очистка названий"
+              label="Очистка названий и проверка моделей"
               active={stage === "cleaning"}
               done={stage === "done"}
               detail={

@@ -73,6 +73,8 @@ export function GroupHeaderControls({
   canUndo,
   onCleanTitles,
   isCleaning,
+  suggestionCount,
+  onOpenSuggestions,
 }: {
   onExport: () => void;
   isExporting: boolean;
@@ -80,6 +82,8 @@ export function GroupHeaderControls({
   canUndo: boolean;
   onCleanTitles: () => void;
   isCleaning: boolean;
+  suggestionCount: number;
+  onOpenSuggestions: () => void;
 }) {
   const search = useAppStore((s) => s.search);
   const setSearch = useAppStore((s) => s.setSearch);
@@ -225,13 +229,29 @@ export function GroupHeaderControls({
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {suggestionCount > 0 ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onOpenSuggestions}
+          title="Проверить возможные объединения по модели"
+        >
+          <HugeiconsIcon icon={GroupLayersIcon} data-icon="inline-start" />
+          Предложения: {suggestionCount}
+        </Button>
+      ) : null}
+
       <Button
         variant="outline"
         size="icon"
         onClick={onCleanTitles}
         disabled={isCleaning}
-        aria-label="Очистить названия групп ИИ"
-        title={isCleaning ? "Очистка названий…" : "Очистить названия групп ИИ"}
+        aria-label="Очистить названия и проверить модели ИИ"
+        title={
+          isCleaning
+            ? "Очистка названий и проверка моделей…"
+            : "Очистить названия и проверить модели ИИ"
+        }
       >
         <HugeiconsIcon
           icon={isCleaning ? Loading03Icon : SparklesIcon}

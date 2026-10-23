@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import { test } from "node:test";
 
 import { parseCsv } from "@/lib/csv/parse";
@@ -11,13 +9,15 @@ import {
 } from "@/lib/grouping/cluster";
 import { mergeByTitle } from "@/lib/grouping/merge";
 import type { ParsedProduct } from "@/lib/types";
-
-const FIXTURE = path.join(process.cwd(), "test-data.csv");
-const hasFixture = fs.existsSync(FIXTURE);
+import {
+  SYNTHETIC_CSV,
+  SYNTHETIC_GROUP_COUNT,
+  SYNTHETIC_PRODUCT_COUNT,
+  SYNTHETIC_SINGLE_COUNT,
+} from "./fixtures";
 
 const load = () => {
-  const text = fs.readFileSync(FIXTURE, "utf8");
-  const { products, columnMap } = parseCsv(text);
+  const { products, columnMap } = parseCsv(SYNTHETIC_CSV);
   const clusters = clusterByPhotos(products);
   const grouped = toGroups(clusters, products);
   const { groups, mergedCount } = mergeByTitle(grouped, products);
@@ -47,15 +47,15 @@ function product(
   };
 }
 
-test("парсер читает все строки файла", { skip: !hasFixture }, () => {
+test("парсер читает все строки файла", () => {
   const { products } = load();
-  assert.equal(products.length, 300);
+  assert.equal(products.length, SYNTHETIC_PRODUCT_COUNT);
   assert.equal(products.filter((p) => !p.size).length, 0);
   assert.equal(products.filter((p) => !p.imageUrls.length).length, 0);
   assert.equal(products.filter((p) => !p.goodsTitle).length, 0);
 });
 
-test("EAN и рост отсутствуют в файле — значение null, не ошибка", { skip: !hasFixture }, () => {
+test("EAN и рост отсутствуют в файле — значение null, не ошибка", () => {
   const { products, columnMap } = load();
   assert.equal(products.filter((p) => p.ean !== null).length, 0);
   assert.equal(products.filter((p) => p.height !== null).length, 0);
@@ -64,32 +64,35 @@ test("EAN и рост отсутствуют в файле — значение 
   assert.ok(missing.includes("height"));
 });
 
-test("колонки с разными ID одного атрибута разводятся правильно", { skip: !hasFixture }, () => {
+test("колонки с разными ID одного атрибута разводятся правильно", () => {
   const { products } = load();
   // Размер: одежда — буквенный, обувь — числовой.
-  const clothing = products.filter((p) =>
-    p.categoryTitle.includes("толстовки"),
-  );
-  const shoes = products.filter((p) => p.categoryTitle.includes("кроссовки"));
+  const clothing = products.filter((p) => p.categoryTitle === "Одежда");
+  const shoes = products.filter((p) => p.categoryTitle === "Обувь");
   assert.ok(clothing.every((p) => /^[A-Z]/.test(p.size ?? "")));
   assert.ok(shoes.every((p) => /^\d/.test(p.size ?? "")));
   assert.ok(products.every((p) => p.size !== null));
 });
 
-test("фото-группировка: 68 кластеров и 68 групп, 6 одиночных", { skip: !hasFixture }, () => {
-  const text = fs.readFileSync(FIXTURE, "utf8");
-  const { products } = parseCsv(text);
+test("фото-группировка: синтетические кластеры и группы", () => {
+  const { products } = parseCsv(SYNTHETIC_CSV);
   const clusters = clusterByPhotos(products);
-  assert.equal(clusters.length, 68);
-  assert.equal(clusters.filter((c) => c.memberIndexes.length === 1).length, 6);
+  assert.equal(clusters.length, SYNTHETIC_GROUP_COUNT);
+  assert.equal(
+    clusters.filter((c) => c.memberIndexes.length === 1).length,
+    SYNTHETIC_SINGLE_COUNT,
+  );
 
   const { groups, mergedCount } = mergeByTitle(
     toGroups(clusters, products),
     products,
   );
-  assert.equal(groups.length, 68);
+  assert.equal(groups.length, SYNTHETIC_GROUP_COUNT);
   assert.equal(mergedCount, 0);
-  assert.equal(groups.filter((g) => g.memberIndexes.length === 1).length, 6);
+  assert.equal(
+    groups.filter((g) => g.memberIndexes.length === 1).length,
+    SYNTHETIC_SINGLE_COUNT,
+  );
 });
 
 test("общая ссылка на фото объединяет товары внутри категории", () => {
@@ -137,7 +140,7 @@ test("одинаковые фото не объединяют товары ра�
   assert.equal(clusters.length, 2);
 });
 
-test("название группы — исходный заголовок первого товара", { skip: !hasFixture }, () => {
+test("название группы — исходный заголовок первого товара", () => {
   const { products, groups } = load();
   for (const group of groups) {
     const first = products[group.memberIndexes[0]];
@@ -200,7 +203,7 @@ test("слияние по названию работает только вну�
   );
 });
 
-test("группы не пересекают категории", { skip: !hasFixture }, () => {
+test("группы не пересекают категории", () => {
   const { products, groups } = load();
   for (const group of groups) {
     const categories = new Set(
@@ -214,7 +217,7 @@ test("группы не пересекают категории", { skip: !hasFi
   }
 });
 
-test("названия групп уникальны внутри категории", { skip: !hasFixture }, () => {
+test("названия групп уникальны внутри категории", () => {
   const { groups } = load();
   const keys = groups.map((g) => `${g.categoryId}\u0000${g.titleKey}`);
   assert.equal(new Set(keys).size, keys.length);

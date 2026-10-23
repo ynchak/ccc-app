@@ -25,6 +25,7 @@ import {
   MoveProductsDialog,
 } from "@/components/groups/group-dialogs";
 import { GroupSection } from "@/components/groups/group-section";
+import { MergeSuggestionsDialog } from "@/components/groups/merge-suggestions-dialog";
 import { GroupPagination } from "@/components/groups/group-pagination";
 import { ProductSelectionBar } from "@/components/groups/product-selection-bar";
 import { GroupFilterBar, GroupHeaderControls } from "@/components/groups/group-toolbar";
@@ -114,6 +115,7 @@ export function AppShell() {
   const products = useAppStore((s) => s.products);
   const productToGroup = useAppStore((s) => s.productToGroup);
   const undoStack = useAppStore((s) => s.undoStack);
+  const mergeSuggestions = useAppStore((s) => s.mergeSuggestions);
   const page = useAppStore((s) => s.page);
   const pageSize = useAppStore((s) => s.pageSize);
   const setPage = useAppStore((s) => s.setPage);
@@ -146,6 +148,7 @@ export function AppShell() {
   const [importOpen, setImportOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isCleaningTitles, setIsCleaningTitles] = useState(false);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [mergeGroupIds, setMergeGroupIds] = useState<number[] | null>(null);
   const [moveProductIds, setMoveProductIds] = useState<number[] | null>(null);
   const [detailsTarget, setDetailsTarget] = useState<Product | null>(null);
@@ -270,17 +273,26 @@ export function AppShell() {
         notify("Нет автоматических групп для очистки");
       } else if (result.skipped) {
         notify("LLM не настроена — названия не изменены", "error");
-      } else if (result.failed > 0) {
-        notify(
-          `Названия очищены: ${result.cleaned} из ${result.total}. Часть групп не обработана.`,
-          "error",
-        );
       } else {
+        const parts = [
+          result.cleaned > 0 ? `очищено названий: ${result.cleaned}` : null,
+          result.merged > 0 ? `объединено по названию: ${result.merged}` : null,
+          result.modelMerged > 0
+            ? `объединено по модели: ${result.modelMerged}`
+            : null,
+          result.suggestions.length > 0
+            ? `предложений: ${result.suggestions.length}`
+            : null,
+          result.failed > 0 ? `не обработано: ${result.failed}` : null,
+        ].filter(Boolean);
+        const message =
+          parts.length > 0 ? parts.join(", ") : "Изменений нет";
+        const hasProblem = result.failed > 0 || result.jevFailed;
         notify(
-          `Названия очищены: ${result.cleaned} из ${result.total}${
-            result.merged > 0 ? `, объединено групп: ${result.merged}` : ""
-          }.`,
-          "success",
+          result.jevFailed
+            ? `${message}. Jev не смог проверить модели.`
+            : message,
+          hasProblem ? "error" : "success",
         );
       }
     } catch (caught) {
@@ -395,6 +407,8 @@ export function AppShell() {
                   canUndo={undoStack.length > 0}
                   onCleanTitles={() => void handleCleanTitles()}
                   isCleaning={isCleaningTitles}
+                  suggestionCount={mergeSuggestions.length}
+                  onOpenSuggestions={() => setSuggestionsOpen(true)}
                 />
               </div>
             ) : (
@@ -447,8 +461,9 @@ export function AppShell() {
                   <EmptyTitle>Файл не загружен</EmptyTitle>
                   <EmptyDescription>
                     Загрузите CSV с товарами — они автоматически сгруппируются
-                    по общим ссылкам на фото. Дальше группы можно править
-                    вручную и экспортировать в XLSX.
+                    по общим ссылкам на фото, а затем Jev проверит, не являются
+                    ли разные группы вариантами одной модели. Дальше группы
+                    можно править вручную и экспортировать в XLSX.
                   </EmptyDescription>
                 </EmptyHeader>
                 <Button onClick={() => setImportOpen(true)}>
@@ -550,6 +565,11 @@ export function AppShell() {
       </div>
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} />
+
+      <MergeSuggestionsDialog
+        open={suggestionsOpen}
+        onOpenChange={setSuggestionsOpen}
+      />
 
       <MergeGroupsDialog
         initialGroupIds={mergeGroupIds ?? []}

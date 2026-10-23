@@ -34,6 +34,21 @@ import {
 } from "@/lib/llm/client";
 import type { CleanTitleInput, CleanTitleResult } from "@/lib/llm/title-cleanup";
 import {
+  JevNotConfiguredError,
+  JevRequestError,
+  fetchJevStatus,
+  matchPairsBatch,
+} from "@/lib/jev/client";
+import { buildJevGroupProfile, generateCandidatePairs } from "@/lib/jev/candidates";
+import { applyJevDecisions } from "@/lib/jev/merge";
+import type {
+  CandidatePair,
+  JevGroupProfile,
+  JevPair,
+  JevPairResult,
+  MergeSuggestion,
+} from "@/lib/jev/types";
+import {
   DEFAULT_CARD_SIZE,
   isCardSize,
   type CardSize,
@@ -86,7 +101,13 @@ export interface CleanupRunResult {
   total: number;
   cleaned: number;
   merged: number;
+  /** Сколько групп объединено вторым слоем Jev. */
+  modelMerged: number;
+  /** Пары, которые Jev считает вероятными, но не автоматическими. */
+  suggestions: MergeSuggestion[];
   failed: number;
+  jevSkipped: boolean;
+  jevFailed: boolean;
   skipped: boolean;
 }
 
@@ -122,6 +143,8 @@ interface AppState {
   cardSize: CardSize;
   selectedGroupIds: Set<number>;
   selectedProductIds: Set<number>;
+  /** Пары групп, которые Jev предлагает объединить, но не делает это сам. */
+  mergeSuggestions: MergeSuggestion[];
   undoStack: UndoEntry[];
   isLoading: boolean;
   lastSavedAt: number | null;
@@ -169,6 +192,9 @@ interface AppState {
     onProgress?: (done: number, total: number) => void,
   ) => Promise<CleanupRunResult>;
   resetGroupTitle: (groupId: number) => Promise<boolean>;
+  applyMergeSuggestion: (aId: number, bId: number) => Promise<boolean>;
+  dismissMergeSuggestion: (aId: number, bId: number) => void;
+  clearMergeSuggestions: () => void;
   undo: () => Promise<boolean>;
 }
 
@@ -241,6 +267,27 @@ function chunkArray<T>(items: T[], size: number): T[][] {
   return chunks;
 }
 
+/** Строит профили групп и пары для Jev. */
+function buildJevPairs(
+  groups: Map<number, Group>,
+  products: Map<number, Product>,
+  candidates: CandidatePair[],
+): JevPair[] {
+  const profiles = new Map<number, JevGroupProfile>();
+  for (const group of groups.values()) {
+    const profile = buildJevGroupProfile(group, products);
+    if (profile) profiles.set(group.id, profile);
+  }
+
+  return candidates
+    .map((pair) => {
+      const a = profiles.get(pair.aId);
+      const b = profiles.get(pair.bId);
+      return a && b ? { a, b } : null;
+    })
+    .filter((pair): pair is JevPair => pair !== null);
+}
+
 /** Ключ кэша очистки названия. */
 function cleanupCacheKey(
   input: CleanTitleInput,
@@ -306,6 +353,18 @@ function refreshDerivedTitles(
   }
 }
 
+/** Помечает группы как изменённые вручную. */
+function markManual(
+  groups: Map<number, Group>,
+  ids: Iterable<number>,
+): void {
+  for (const id of new Set(ids)) {
+    const group = groups.get(id);
+    if (!group || group.manual) continue;
+    groups.set(id, { ...group, manual: true });
+  }
+}
+
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => {
@@ -350,6 +409,10 @@ export const useAppStore = create<AppState>()(
         state.sortBy,
       ),
       productToGroup: buildProductToGroup([...after.values()]),
+      mergeSuggestions: state.mergeSuggestions.filter(
+        (suggestion) =>
+          after.has(suggestion.aId) && after.has(suggestion.bId),
+      ),
       datasets,
       undoStack: [
         ...state.undoStack,
@@ -431,6 +494,7 @@ export const useAppStore = create<AppState>()(
       if (next && !next.productIds.includes(product.id)) {
         groups.set(existing.id, {
           ...next,
+          manual: true,
           productIds: sortProductIds(
             [...next.productIds, product.id],
             get().products,
@@ -450,6 +514,7 @@ export const useAppStore = create<AppState>()(
         titleRaw: product.goodsTitle,
         titleKey,
         titleSource: "derived",
+        manual: true,
         categoryId: product.categoryId,
         categoryTitle: product.categoryTitle,
         productIds: [product.id],
@@ -463,6 +528,7 @@ export const useAppStore = create<AppState>()(
         titleRaw: product.goodsTitle,
         titleKey,
         titleSource: "derived",
+        manual: true,
         categoryId: product.categoryId,
         categoryTitle: product.categoryTitle,
         productIds: [product.id],
@@ -489,6 +555,7 @@ export const useAppStore = create<AppState>()(
     cardSize: DEFAULT_CARD_SIZE,
     selectedGroupIds: new Set(),
     selectedProductIds: new Set(),
+    mergeSuggestions: [],
     undoStack: [],
     isLoading: false,
     lastSavedAt: null,
@@ -605,6 +672,7 @@ export const useAppStore = create<AppState>()(
           },
           selectedGroupIds: new Set(),
           selectedProductIds: new Set(),
+          mergeSuggestions: [],
           undoStack: [],
           lastSavedAt: Date.now(),
         });
@@ -661,6 +729,7 @@ export const useAppStore = create<AppState>()(
           },
           selectedGroupIds: new Set(),
           selectedProductIds: new Set(),
+          mergeSuggestions: [],
           undoStack: [],
           lastSavedAt: Date.now(),
         });
@@ -698,6 +767,7 @@ export const useAppStore = create<AppState>()(
               cardSize: DEFAULT_CARD_SIZE,
               selectedGroupIds: new Set(),
               selectedProductIds: new Set(),
+              mergeSuggestions: [],
             });
           }
         }
@@ -830,6 +900,7 @@ export const useAppStore = create<AppState>()(
           title,
           titleKey,
           titleSource: "manual",
+          manual: true,
         });
         await commit(state.groups, next, "Группа переименована");
         return true;
@@ -848,6 +919,7 @@ export const useAppStore = create<AppState>()(
         title,
         titleKey,
         titleSource: "manual",
+        manual: true,
         productIds: sortProductIds(
           [...target.productIds, ...movedIds],
           state.products,
@@ -895,7 +967,7 @@ export const useAppStore = create<AppState>()(
       );
 
       const next = new Map(state.groups);
-      next.set(targetId, { ...target, productIds });
+      next.set(targetId, { ...target, manual: true, productIds });
       for (const source of sources) next.delete(source.id);
 
       const selectedGroupIds = new Set(state.selectedGroupIds);
@@ -931,12 +1003,18 @@ export const useAppStore = create<AppState>()(
       }
 
       const idSet = new Set(products.map((product) => product.id));
+      const affectedGroupIds = new Set<number>([toGroupId]);
+      for (const product of products) {
+        const sourceGroupId = state.productToGroup.get(product.id);
+        if (sourceGroupId !== undefined) affectedGroupIds.add(sourceGroupId);
+      }
       const next = new Map(state.groups);
       removeFromOtherGroups(next, idSet, toGroupId);
 
       const currentTarget = next.get(toGroupId) ?? target;
       next.set(toGroupId, {
         ...currentTarget,
+        manual: true,
         productIds: sortProductIds(
           [
             ...currentTarget.productIds.filter((id) => !idSet.has(id)),
@@ -945,6 +1023,7 @@ export const useAppStore = create<AppState>()(
           state.products,
         ),
       });
+      markManual(next, affectedGroupIds);
 
       dropEmptiedGroups(next, state.groups, toGroupId);
       refreshDerivedTitles(next, state.products, new Set([toGroupId]));
@@ -972,11 +1051,17 @@ export const useAppStore = create<AppState>()(
 
       const next = new Map(state.groups);
       const idSet = new Set(uniqueIds);
+      const affectedGroupIds = new Set<number>();
+      for (const productId of uniqueIds) {
+        const sourceGroupId = state.productToGroup.get(productId);
+        if (sourceGroupId !== undefined) affectedGroupIds.add(sourceGroupId);
+      }
 
       // Сначала забираем товары из старых групп. Если группа опустела,
       // она удалится, а её название освободится для новой группы.
       removeFromOtherGroups(next, idSet, -1);
       dropEmptiedGroups(next, state.groups);
+      markManual(next, affectedGroupIds);
       refreshDerivedTitles(next, state.products);
 
       const baseTitle = title?.trim() || defaultGroupTitle(products[0]);
@@ -999,6 +1084,7 @@ export const useAppStore = create<AppState>()(
         titleRaw: products[0].goodsTitle,
         titleKey,
         titleSource: "derived",
+        manual: true,
         categoryId,
         categoryTitle: products[0].categoryTitle,
         productIds: [],
@@ -1013,6 +1099,7 @@ export const useAppStore = create<AppState>()(
         titleRaw: products[0].goodsTitle,
         titleKey,
         titleSource: "derived",
+        manual: true,
         categoryId,
         categoryTitle: products[0].categoryTitle,
         productIds: sortProductIds(uniqueIds, state.products),
@@ -1043,7 +1130,7 @@ export const useAppStore = create<AppState>()(
 
       const next = new Map(state.groups);
       const withoutProduct = group.productIds.filter((id) => id !== productId);
-      next.set(groupId, { ...group, productIds: withoutProduct });
+      next.set(groupId, { ...group, manual: true, productIds: withoutProduct });
 
       await ensureOwnGroup(next, product, groupId);
       dropEmptiedGroups(next, state.groups, groupId);
@@ -1067,6 +1154,7 @@ export const useAppStore = create<AppState>()(
 
         next.set(groupId, {
           ...group,
+          manual: true,
           productIds: group.productIds.filter((id) => id !== productId),
         });
         await ensureOwnGroup(next, product, groupId);
@@ -1111,11 +1199,24 @@ export const useAppStore = create<AppState>()(
       const state = get();
       const datasetId = state.activeDatasetId;
       const candidates = [...state.groups.values()].filter(
-        (group) => group.titleSource !== "manual" && group.title.trim(),
+        (group) =>
+          group.titleSource !== "manual" &&
+          !group.manual &&
+          group.title.trim(),
       );
       const total = candidates.length;
       if (total === 0) {
-        return { total: 0, cleaned: 0, merged: 0, failed: 0, skipped: false };
+        return {
+          total: 0,
+          cleaned: 0,
+          merged: 0,
+          modelMerged: 0,
+          suggestions: [],
+          failed: 0,
+          jevSkipped: false,
+          jevFailed: false,
+          skipped: false,
+        };
       }
 
       set({ isLoading: true });
@@ -1129,7 +1230,11 @@ export const useAppStore = create<AppState>()(
               total,
               cleaned: 0,
               merged: 0,
+              modelMerged: 0,
+              suggestions: [],
               failed: 0,
+              jevSkipped: true,
+              jevFailed: false,
               skipped: true,
             };
           }
@@ -1137,7 +1242,17 @@ export const useAppStore = create<AppState>()(
         }
 
         if (!status.configured) {
-          return { total, cleaned: 0, merged: 0, failed: 0, skipped: true };
+          return {
+            total,
+            cleaned: 0,
+            merged: 0,
+            modelMerged: 0,
+            suggestions: [],
+            failed: 0,
+            jevSkipped: true,
+            jevFailed: false,
+            skipped: true,
+          };
         }
 
         const inputs: CleanTitleInput[] = candidates.map((group) => {
@@ -1214,7 +1329,17 @@ export const useAppStore = create<AppState>()(
               }
             } catch (error) {
               if (error instanceof LlmNotConfiguredError) {
-                return { total, cleaned: 0, merged: 0, failed: 0, skipped: true };
+                return {
+            total,
+            cleaned: 0,
+            merged: 0,
+            modelMerged: 0,
+            suggestions: [],
+            failed: 0,
+            jevSkipped: true,
+            jevFailed: false,
+            skipped: true,
+          };
               }
               if (error instanceof LlmRequestError && error.status === 401) {
                 throw error;
@@ -1233,7 +1358,17 @@ export const useAppStore = create<AppState>()(
         );
         const workerResults = await Promise.all(workers);
         if (workerResults.some((result) => result?.skipped)) {
-          return { total, cleaned: 0, merged: 0, failed: 0, skipped: true };
+          return {
+            total,
+            cleaned: 0,
+            merged: 0,
+            modelMerged: 0,
+            suggestions: [],
+            failed: 0,
+            jevSkipped: true,
+            jevFailed: false,
+            skipped: true,
+          };
         }
 
         // Пока шли запросы, пользователь мог переключить или удалить файл.
@@ -1242,12 +1377,16 @@ export const useAppStore = create<AppState>()(
             total,
             cleaned: 0,
             merged: 0,
+            modelMerged: 0,
+            suggestions: [],
             failed: total,
+            jevSkipped: false,
+            jevFailed: false,
             skipped: false,
           };
         }
 
-        const next = new Map(state.groups);
+        let next = new Map(state.groups);
         let cleanedCount = 0;
         for (const group of candidates) {
           const result = results.get(String(group.id));
@@ -1265,7 +1404,7 @@ export const useAppStore = create<AppState>()(
         // После очистки названия могут совпасть — сливаем автоматические группы.
         const buckets = new Map<string, Group[]>();
         for (const group of next.values()) {
-          if (group.titleSource === "manual") continue;
+          if (group.titleSource === "manual" || group.manual) continue;
           const key = `${group.categoryId}\u0000${group.titleKey}`;
           const bucket = buckets.get(key);
           if (bucket) bucket.push(group);
@@ -1288,15 +1427,125 @@ export const useAppStore = create<AppState>()(
           }
         }
 
-        if (cleanedCount > 0 || merged > 0) {
-          await commit(state.groups, next, "Названия очищены ИИ");
+        // Второй слой: Jev проверяет пары групп, у которых разные названия,
+        // но которые могут быть вариантами одной модели.
+        let modelMerged = 0;
+        let suggestions: MergeSuggestion[] = [];
+        let jevSkipped = false;
+        let jevFailed = false;
+
+        try {
+          const jevStatus = await fetchJevStatus();
+          if (!jevStatus.configured) {
+            jevSkipped = true;
+          } else {
+            const candidatePairs = generateCandidatePairs(
+              next.values(),
+              state.products,
+            );
+            const jevPairs = buildJevPairs(next, state.products, candidatePairs);
+
+            if (jevPairs.length > 0) {
+              const jevBatches = chunkArray(jevPairs, 20);
+              const decisions: JevPairResult[] = [];
+              let jevBatchIndex = 0;
+
+              const runJevBatch = async () => {
+                while (jevBatchIndex < jevBatches.length) {
+                  const batch = jevBatches[jevBatchIndex];
+                  jevBatchIndex++;
+                  try {
+                    let data;
+                    try {
+                      data = await matchPairsBatch(batch);
+                    } catch (error) {
+                      if (
+                        error instanceof JevRequestError &&
+                        (error.status === 429 || error.status >= 500)
+                      ) {
+                        await new Promise((resolve) => setTimeout(resolve, 1200));
+                        data = await matchPairsBatch(batch);
+                      } else {
+                        throw error;
+                      }
+                    }
+                    decisions.push(...data.results);
+                  } catch (error) {
+                    if (error instanceof JevNotConfiguredError) {
+                      jevSkipped = true;
+                      return;
+                    }
+                    if (error instanceof JevRequestError && error.status === 401) {
+                      throw error;
+                    }
+                    jevFailed = true;
+                  }
+                }
+              };
+
+              const jevWorkers = Array.from(
+                { length: Math.min(3, jevBatches.length) },
+                () => runJevBatch(),
+              );
+              await Promise.all(jevWorkers);
+
+              if (get().activeDatasetId !== datasetId) {
+                return {
+                  total,
+                  cleaned: 0,
+                  merged: 0,
+                  modelMerged: 0,
+                  suggestions: [],
+                  failed: total,
+                  jevSkipped,
+                  jevFailed,
+                  skipped: false,
+                };
+              }
+
+              if (decisions.length > 0) {
+                const applied = applyJevDecisions(
+                  next,
+                  decisions,
+                  state.products,
+                );
+                next = applied.groups;
+                modelMerged = applied.merged;
+                suggestions = applied.suggestions;
+              }
+            }
+          }
+        } catch (error) {
+          if (error instanceof JevRequestError && error.status === 401) {
+            throw error;
+          }
+          if (error instanceof JevNotConfiguredError) {
+            jevSkipped = true;
+          } else {
+            jevFailed = true;
+          }
         }
+
+        if (cleanedCount > 0 || merged > 0 || modelMerged > 0) {
+          await commit(
+            state.groups,
+            next,
+            modelMerged > 0
+              ? "Названия очищены, группы объединены по модели"
+              : "Названия очищены ИИ",
+          );
+        }
+        set({ mergeSuggestions: suggestions });
 
         return {
           total,
           cleaned: cleanedCount,
           merged,
+          modelMerged,
+          suggestions,
           failed,
+          jevSkipped,
+          jevFailed,
           skipped: false,
         };
       } finally {
@@ -1318,6 +1567,7 @@ export const useAppStore = create<AppState>()(
         title,
         titleKey,
         titleSource: "derived",
+        manual: true,
       });
 
       const duplicates = [...next.values()].filter(
@@ -1338,6 +1588,7 @@ export const useAppStore = create<AppState>()(
           title,
           titleKey,
           titleSource: "derived",
+          manual: true,
           productIds: sortProductIds(
             [...target.productIds, ...removedIds],
             state.products,
@@ -1349,6 +1600,45 @@ export const useAppStore = create<AppState>()(
 
       await commit(state.groups, next, "Название группы восстановлено");
       return true;
+    },
+
+    async applyMergeSuggestion(aId, bId) {
+      const state = get();
+      const a = state.groups.get(aId);
+      const b = state.groups.get(bId);
+      if (!a || !b || a.id === b.id) return false;
+
+      const [target, source] =
+        a.number <= b.number ? [a, b] : [b, a];
+      const ok = await get().mergeGroups([source.id], target.id);
+      if (!ok) return false;
+
+      set({
+        mergeSuggestions: get().mergeSuggestions.filter(
+          (suggestion) =>
+            !(
+              (suggestion.aId === aId && suggestion.bId === bId) ||
+              (suggestion.aId === bId && suggestion.bId === aId)
+            ),
+        ),
+      });
+      return true;
+    },
+
+    dismissMergeSuggestion(aId, bId) {
+      set({
+        mergeSuggestions: get().mergeSuggestions.filter(
+          (suggestion) =>
+            !(
+              (suggestion.aId === aId && suggestion.bId === bId) ||
+              (suggestion.aId === bId && suggestion.bId === aId)
+            ),
+        ),
+      });
+    },
+
+    clearMergeSuggestions() {
+      set({ mergeSuggestions: [] });
     },
 
     async undo() {
