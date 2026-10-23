@@ -116,6 +116,7 @@ export const ProductCard = memo(function ProductCard({
                 sizes="(max-width: 640px) 100vw, 320px"
                 className="object-cover"
                 unoptimized
+                decoding="async"
                 draggable={false}
                 onError={handleImageError}
               />
@@ -129,7 +130,7 @@ export const ProductCard = memo(function ProductCard({
         </button>
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between p-2">
-          <div className="pointer-events-auto rounded-md bg-background/90 p-1 shadow-sm backdrop-blur">
+          <div className="pointer-events-auto rounded-md bg-background/95 p-1">
             <Checkbox
               checked={selected}
               onCheckedChange={() => toggleProductSelection(product.id)}
@@ -140,7 +141,7 @@ export const ProductCard = memo(function ProductCard({
           <div className="pointer-events-auto flex items-center gap-1">
             <button
               type="button"
-              className="flex size-7 cursor-grab items-center justify-center rounded-md bg-background/90 text-muted-foreground shadow-sm backdrop-blur hover:text-foreground active:cursor-grabbing"
+              className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-md bg-background/95 text-muted-foreground hover:text-foreground active:cursor-grabbing"
               draggable
               onDragStart={handleDragStart}
               aria-label="Перетягнути товар"
@@ -155,7 +156,7 @@ export const ProductCard = memo(function ProductCard({
                   <Button
                     variant="secondary"
                     size="icon-sm"
-                    className="bg-background/90 shadow-sm backdrop-blur"
+                    className="bg-background/95"
                     aria-label="Дії з товаром"
                   />
                 }
@@ -208,7 +209,7 @@ export const ProductCard = memo(function ProductCard({
             <button
               type="button"
               onClick={handlePrevImage}
-              className="absolute top-1/2 left-2 z-10 flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-foreground opacity-80 shadow-sm backdrop-blur transition-opacity hover:opacity-100 focus-visible:opacity-100"
+              className="absolute top-1/2 left-2 z-10 flex size-7 shrink-0 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/95 text-foreground opacity-80 transition-opacity hover:opacity-100 focus-visible:opacity-100"
               aria-label="Попереднє фото"
             >
               <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
@@ -216,13 +217,13 @@ export const ProductCard = memo(function ProductCard({
             <button
               type="button"
               onClick={handleNextImage}
-              className="absolute top-1/2 right-2 z-10 flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-foreground opacity-80 shadow-sm backdrop-blur transition-opacity hover:opacity-100 focus-visible:opacity-100"
+              className="absolute top-1/2 right-2 z-10 flex size-7 shrink-0 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/95 text-foreground opacity-80 transition-opacity hover:opacity-100 focus-visible:opacity-100"
               aria-label="Наступне фото"
             >
               <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" />
             </button>
 
-            <span className="pointer-events-none absolute bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-background/90 px-2 py-0.5 text-[11px] text-muted-foreground shadow-sm backdrop-blur">
+            <span className="pointer-events-none absolute bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full border border-border/60 bg-background/95 px-2 py-0.5 text-[11px] text-muted-foreground">
               {safeIndex + 1} / {images.length}
             </span>
           </>
