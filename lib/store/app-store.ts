@@ -88,6 +88,8 @@ export interface DatasetFilters {
   sortBy: SortBy;
   pageSize: PageSize;
   cardSize: CardWidth;
+  /** Номер последней просмотренной группы — чтобы вернуться к ней после перезагрузки. */
+  lastViewedGroupNumber: number | null;
 }
 
 /** Настройки по умолчанию. */
@@ -97,7 +99,30 @@ const DEFAULT_FILTERS: DatasetFilters = {
   sortBy: "category",
   pageSize: DEFAULT_PAGE_SIZE,
   cardSize: DEFAULT_CARD_WIDTH,
+  lastViewedGroupNumber: null,
 };
+
+/** Запрос на восстановление позиции списка после загрузки/поиска. */
+export interface RestoreGroupRequest {
+  groupId: number | null;
+  /** Смещение группы относительно верха списка. */
+  offset: number;
+  /** Куда прокрутить, если группу не удалось найти. */
+  fallbackTop: number;
+  /** Уникальный идентификатор запроса, чтобы обработать его один раз. */
+  token: number;
+}
+
+let restoreRequestToken = 0;
+
+function createRestoreGroupRequest(
+  groupId: number | null,
+  offset = 0,
+  fallbackTop = 0,
+): RestoreGroupRequest {
+  restoreRequestToken += 1;
+  return { groupId, offset, fallbackTop, token: restoreRequestToken };
+}
 
 /** Безопасное хранилище для SSR. */
 const filterStorage = createJSONStorage<Pick<AppState, "filtersByDataset">>(
@@ -162,6 +187,8 @@ interface AppState {
   pageSize: PageSize;
   /** Размер карточек товаров. */
   cardSize: CardWidth;
+  /** Одноразовый запрос на прокрутку к группе. */
+  restoreGroupRequest: RestoreGroupRequest | null;
   selectedGroupIds: Set<number>;
   selectedProductIds: Set<number>;
   /** Пары групп, которые Jev предлагает объединить, но не делает это сам. */
@@ -181,7 +208,7 @@ interface AppState {
   removeDataset: (datasetId: number) => Promise<void>;
   renameDataset: (datasetId: number, name: string) => Promise<boolean>;
 
-  setSearch: (value: string) => void;
+  setSearch: (value: string, page?: number) => void;
   setCategoryFilter: (value: string | null) => void;
   setSortBy: (value: SortBy) => void;
   resort: () => void;
@@ -189,6 +216,13 @@ interface AppState {
   setPage: (value: number) => void;
   setPageSize: (value: PageSize) => void;
   setCardSize: (value: CardWidth) => void;
+  setLastViewedGroupNumber: (value: number | null) => void;
+  requestRestoreGroup: (request: {
+    groupId: number | null;
+    offset?: number;
+    fallbackTop?: number;
+  }) => void;
+  clearRestoreGroupRequest: () => void;
   toggleGroupSelection: (groupId: number) => void;
   clearGroupSelection: () => void;
   toggleProductSelection: (productId: number) => void;
@@ -235,6 +269,89 @@ function buildProductToGroup(groups: Group[]): Map<number, number> {
     for (const productId of group.productIds) index.set(productId, group.id);
   }
   return index;
+}
+
+/** Параметры фильтрации списка групп. */
+export interface VisibleGroupsFilter {
+  groups: Map<number, Group>;
+  products: Map<number, Product>;
+  orderedGroupIds: number[];
+  sortBy: SortBy;
+  search: string;
+  categoryFilter: string | null;
+  quickFilter: QuickFilter;
+}
+
+/** Ищет группу по номеру, а если её уже нет — ближайшую по номеру. */
+export function findGroupIndexByNumber(
+  groups: Group[],
+  number: number,
+): number {
+  const exact = groups.findIndex((group) => group.number === number);
+  if (exact >= 0) return exact;
+
+  let bestIndex = -1;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (let index = 0; index < groups.length; index++) {
+    const distance = Math.abs(groups[index].number - number);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index;
+    }
+  }
+  return bestIndex;
+}
+
+/**
+ * Сортированный и отфильтрованный список групп.
+ *
+ * Вынесено из хука, чтобы тем же правилом пользоваться при восстановлении
+ * последней просмотренной группы.
+ */
+export function filterVisibleGroups({
+  groups,
+  products,
+  orderedGroupIds,
+  sortBy,
+  search,
+  categoryFilter,
+  quickFilter,
+}: VisibleGroupsFilter): Group[] {
+  const orderComplete =
+    orderedGroupIds.length === groups.size &&
+    orderedGroupIds.every((id) => groups.has(id));
+  const order = orderComplete
+    ? orderedGroupIds
+    : buildStableOrder(orderedGroupIds, groups, sortBy);
+  const query = search.trim().toLowerCase();
+
+  return order
+    .map((id) => groups.get(id))
+    .filter((group): group is Group => group !== undefined)
+    .filter((group) => {
+      if (categoryFilter !== null && group.categoryId !== categoryFilter) {
+        return false;
+      }
+
+      switch (quickFilter) {
+        case "singles":
+          if (group.productIds.length !== 1) return false;
+          break;
+      }
+
+      if (!query) return true;
+      if (group.title.toLowerCase().includes(query)) return true;
+      if (String(group.number).includes(query)) return true;
+      return group.productIds.some((id) => {
+        const product = products.get(id);
+        if (!product) return false;
+        return (
+          product.goodsTitle.toLowerCase().includes(query) ||
+          product.goodsArticle.toLowerCase().includes(query) ||
+          product.goodsId.toLowerCase().includes(query)
+        );
+      });
+    });
 }
 
 /** Сортирует id товаров в порядке исходного файла. */
@@ -479,6 +596,12 @@ export const useAppStore = create<AppState>()(
       quickFilter: saved?.quickFilter === "singles" ? "singles" : "all",
       pageSize,
       cardSize,
+      lastViewedGroupNumber:
+        typeof saved?.lastViewedGroupNumber === "number" &&
+        Number.isInteger(saved.lastViewedGroupNumber) &&
+        saved.lastViewedGroupNumber > 0
+          ? saved.lastViewedGroupNumber
+          : null,
     };
   };
 
@@ -582,6 +705,7 @@ export const useAppStore = create<AppState>()(
     page: 1,
     pageSize: DEFAULT_PAGE_SIZE,
     cardSize: DEFAULT_CARD_WIDTH,
+    restoreGroupRequest: null,
     selectedGroupIds: new Set(),
     selectedProductIds: new Set(),
     mergeSuggestions: [],
@@ -704,6 +828,7 @@ export const useAppStore = create<AppState>()(
           page: 1,
           pageSize: filters.pageSize,
           cardSize: filters.cardSize,
+          restoreGroupRequest: null,
           filtersByDataset: {
             ...get().filtersByDataset,
             [String(datasetId.datasetId)]: filters,
@@ -747,20 +872,47 @@ export const useAppStore = create<AppState>()(
               ? saved.categoryFilter
               : null,
         };
+        const productsMap = new Map(products.map((product) => [product.id, product]));
+        const orderedGroupIds = orderGroupIds(groupsMap, filters.sortBy);
+        const visibleGroups = filterVisibleGroups({
+          groups: groupsMap,
+          products: productsMap,
+          orderedGroupIds,
+          sortBy: filters.sortBy,
+          search: "",
+          categoryFilter: filters.categoryFilter,
+          quickFilter: filters.quickFilter,
+        });
+        const lastViewedNumber =
+          typeof filters.lastViewedGroupNumber === "number" &&
+          Number.isInteger(filters.lastViewedGroupNumber)
+            ? filters.lastViewedGroupNumber
+            : null;
+        const lastViewedIndex =
+          lastViewedNumber === null
+            ? -1
+            : findGroupIndexByNumber(visibleGroups, lastViewedNumber);
+        const lastViewedGroup =
+          lastViewedIndex >= 0 ? visibleGroups[lastViewedIndex] : null;
 
         set({
           activeDatasetId: datasetId,
-          products: new Map(products.map((p) => [p.id, p])),
+          products: productsMap,
           groups: groupsMap,
-          orderedGroupIds: orderGroupIds(groupsMap, filters.sortBy),
+          orderedGroupIds,
           productToGroup: buildProductToGroup(numberedGroups),
           search: "",
           categoryFilter: filters.categoryFilter,
           quickFilter: filters.quickFilter,
           sortBy: filters.sortBy,
-          page: 1,
+          page: lastViewedGroup
+            ? Math.floor(lastViewedIndex / filters.pageSize) + 1
+            : 1,
           pageSize: filters.pageSize,
           cardSize: filters.cardSize,
+          restoreGroupRequest: lastViewedGroup
+            ? createRestoreGroupRequest(lastViewedGroup.id)
+            : null,
           filtersByDataset: {
             ...get().filtersByDataset,
             [String(datasetId)]: filters,
@@ -803,6 +955,7 @@ export const useAppStore = create<AppState>()(
               page: 1,
               pageSize: DEFAULT_PAGE_SIZE,
               cardSize: DEFAULT_CARD_WIDTH,
+              restoreGroupRequest: null,
               selectedGroupIds: new Set(),
               selectedProductIds: new Set(),
               mergeSuggestions: [],
@@ -828,8 +981,37 @@ export const useAppStore = create<AppState>()(
       return true;
     },
 
-    setSearch(value) {
-      set({ search: value, page: 1 });
+    setSearch(value, page) {
+      set({ search: value, page: value.trim() ? 1 : (page ?? 1) });
+    },
+
+    setLastViewedGroupNumber(value) {
+      set((state) => {
+        if (state.activeDatasetId === null) return state;
+        const key = String(state.activeDatasetId);
+        const current =
+          state.filtersByDataset[key]?.lastViewedGroupNumber ?? null;
+        if (current === value) return state;
+        return {
+          filtersByDataset: withSavedFilters(state, {
+            lastViewedGroupNumber: value,
+          }),
+        };
+      });
+    },
+
+    requestRestoreGroup(request) {
+      set({
+        restoreGroupRequest: createRestoreGroupRequest(
+          request.groupId,
+          request.offset,
+          request.fallbackTop,
+        ),
+      });
+    },
+
+    clearRestoreGroupRequest() {
+      set({ restoreGroupRequest: null });
     },
 
     setCategoryFilter(value) {
@@ -1910,52 +2092,27 @@ export function useVisibleGroups(): Group[] {
   const categoryFilter = useAppStore((s) => s.categoryFilter);
   const quickFilter = useAppStore((s) => s.quickFilter);
 
-  return useMemo(() => {
-    const orderComplete =
-      orderedGroupIds.length === groups.size &&
-      orderedGroupIds.every((id) => groups.has(id));
-    const order = orderComplete
-      ? orderedGroupIds
-      : buildStableOrder(orderedGroupIds, groups, sortBy);
-
-    const query = search.trim().toLowerCase();
-
-    return order
-      .map((id) => groups.get(id))
-      .filter((group): group is Group => group !== undefined)
-      .filter((group) => {
-        if (categoryFilter !== null && group.categoryId !== categoryFilter) {
-          return false;
-        }
-
-        switch (quickFilter) {
-          case "singles":
-            if (group.productIds.length !== 1) return false;
-            break;
-        }
-
-        if (!query) return true;
-        if (group.title.toLowerCase().includes(query)) return true;
-        if (String(group.number).includes(query)) return true;
-        return group.productIds.some((id) => {
-          const product = products.get(id);
-          if (!product) return false;
-          return (
-            product.goodsTitle.toLowerCase().includes(query) ||
-            product.goodsArticle.toLowerCase().includes(query) ||
-            product.goodsId.toLowerCase().includes(query)
-          );
-        });
-      });
-  }, [
-    groups,
-    products,
-    orderedGroupIds,
-    sortBy,
-    search,
-    categoryFilter,
-    quickFilter,
-  ]);
+  return useMemo(
+    () =>
+      filterVisibleGroups({
+        groups,
+        products,
+        orderedGroupIds,
+        sortBy,
+        search,
+        categoryFilter,
+        quickFilter,
+      }),
+    [
+      groups,
+      products,
+      orderedGroupIds,
+      sortBy,
+      search,
+      categoryFilter,
+      quickFilter,
+    ],
+  );
 }
 
 /** Товары группы в порядке исходного файла. */

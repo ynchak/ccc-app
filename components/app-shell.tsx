@@ -57,6 +57,8 @@ import { exportXlsx } from "@/lib/export/xlsx";
 import { paginate } from "@/lib/pagination";
 import { groupsLabel, productsLabel } from "@/lib/plural";
 import {
+  filterVisibleGroups,
+  findGroupIndexByNumber,
   useAppStore,
   useVisibleGroups,
 } from "@/lib/store/app-store";
@@ -107,6 +109,15 @@ function NewGroupDropZone({
   );
 }
 
+/** Позиция списка, к которой нужно вернуться после очистки поиска. */
+interface SearchOrigin {
+  index: number;
+  groupId: number | null;
+  groupNumber: number | null;
+  offset: number;
+  scrollTop: number;
+}
+
 /**
  * Основной экран приложения.
  */
@@ -123,6 +134,10 @@ export function AppShell() {
   const pageSize = useAppStore((s) => s.pageSize);
   const setPage = useAppStore((s) => s.setPage);
   const setPageSize = useAppStore((s) => s.setPageSize);
+  const restoreGroupRequest = useAppStore((s) => s.restoreGroupRequest);
+  const clearRestoreGroupRequest = useAppStore(
+    (s) => s.clearRestoreGroupRequest,
+  );
   const isLoading = useAppStore((s) => s.isLoading);
   const lastSavedAt = useAppStore((s) => s.lastSavedAt);
   const deleteGroup = useAppStore((s) => s.deleteGroup);
@@ -159,14 +174,92 @@ export function AppShell() {
   const [exportWarnings, setExportWarnings] = useState<string[] | null>(null);
 
   const mainRef = useRef<HTMLElement>(null);
+  const searchOriginRef = useRef<SearchOrigin | null>(null);
 
   useEffect(() => {
     void init();
   }, [init]);
 
   useEffect(() => {
+    searchOriginRef.current = null;
+  }, [activeDatasetId]);
+
+  useEffect(() => {
+    if (useAppStore.getState().restoreGroupRequest) return;
     mainRef.current?.scrollTo({ top: 0 });
   }, [activeDatasetId, pageData.page, pageSize]);
+
+  useEffect(() => {
+    if (!restoreGroupRequest) return;
+    const frame = requestAnimationFrame(() => {
+      const container = mainRef.current;
+      if (!container) {
+        clearRestoreGroupRequest();
+        return;
+      }
+      const element =
+        restoreGroupRequest.groupId === null
+          ? null
+          : container.querySelector<HTMLElement>(
+              `[data-group-id="${restoreGroupRequest.groupId}"]`,
+            );
+      if (!element) {
+        container.scrollTo({ top: restoreGroupRequest.fallbackTop });
+      } else {
+        const top =
+          element.getBoundingClientRect().top -
+          container.getBoundingClientRect().top +
+          container.scrollTop;
+        container.scrollTo({
+          top: Math.max(0, top - restoreGroupRequest.offset),
+        });
+      }
+      clearRestoreGroupRequest();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [restoreGroupRequest, clearRestoreGroupRequest]);
+
+  useEffect(() => {
+    const container = mainRef.current;
+    if (!container || activeDatasetId === null) return;
+
+    let timer = 0;
+    const updateLastViewed = () => {
+      const state = useAppStore.getState();
+      if (state.search.trim() || state.restoreGroupRequest) return;
+      const sections = container.querySelectorAll<HTMLElement>(
+        "[data-group-number]",
+      );
+      const containerTop = container.getBoundingClientRect().top;
+      let first: HTMLElement | null = null;
+      for (const section of sections) {
+        if (section.getBoundingClientRect().bottom > containerTop + 1) {
+          first = section;
+          break;
+        }
+      }
+      if (!first) return;
+      const number = Number(first.dataset.groupNumber);
+      if (!Number.isInteger(number) || number <= 0) return;
+      state.setLastViewedGroupNumber(number);
+    };
+
+    const onScroll = () => {
+      if (timer) return;
+      timer = window.setTimeout(() => {
+        timer = 0;
+        updateLastViewed();
+      }, 150);
+    };
+
+    container.addEventListener("scroll", onScroll, { passive: true });
+    updateLastViewed();
+
+    return () => {
+      container.removeEventListener("scroll", onScroll);
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [activeDatasetId, pageData.page, pageSize, visibleGroups]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -190,6 +283,98 @@ export function AppShell() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [undo]);
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      const state = useAppStore.getState();
+      const wasSearching = state.search.trim().length > 0;
+      const willSearch = value.trim().length > 0;
+
+      if (!wasSearching && willSearch) {
+        const container = mainRef.current;
+        const containerTop = container?.getBoundingClientRect().top ?? 0;
+        let section: HTMLElement | null = null;
+        if (container) {
+          for (const candidate of container.querySelectorAll<HTMLElement>(
+            "[data-group-number]",
+          )) {
+            if (candidate.getBoundingClientRect().bottom > containerTop + 1) {
+              section = candidate;
+              break;
+            }
+          }
+        }
+
+        const number = section ? Number(section.dataset.groupNumber) : NaN;
+        const groupIndex = Number.isInteger(number)
+          ? visibleGroups.findIndex((group) => group.number === number)
+          : -1;
+        const group = groupIndex >= 0 ? visibleGroups[groupIndex] : null;
+
+        searchOriginRef.current = {
+          // Если группа не найдена, запоминаем хотя бы место на странице.
+          index:
+            groupIndex >= 0
+              ? groupIndex
+              : Math.max(0, (pageData.page - 1) * pageSize),
+          groupId: group?.id ?? null,
+          groupNumber: group?.number ?? null,
+          offset: section
+            ? section.getBoundingClientRect().top - containerTop
+            : 0,
+          scrollTop: container?.scrollTop ?? 0,
+        };
+        state.clearRestoreGroupRequest();
+        state.setSearch(value);
+        mainRef.current?.scrollTo({ top: 0 });
+        return;
+      }
+
+      if (wasSearching && !willSearch) {
+        const origin = searchOriginRef.current;
+        searchOriginRef.current = null;
+        if (!origin) {
+          state.setSearch("");
+          return;
+        }
+
+        const full = filterVisibleGroups({
+          groups: state.groups,
+          products: state.products,
+          orderedGroupIds: state.orderedGroupIds,
+          sortBy: state.sortBy,
+          search: "",
+          categoryFilter: state.categoryFilter,
+          quickFilter: state.quickFilter,
+        });
+        let index =
+          origin.groupId === null
+            ? -1
+            : full.findIndex((group) => group.id === origin.groupId);
+        if (index < 0 && origin.groupNumber !== null) {
+          index = findGroupIndexByNumber(full, origin.groupNumber);
+        }
+        if (index < 0 && full.length > 0) {
+          index = Math.min(origin.index, full.length - 1);
+        }
+
+        const target = index >= 0 ? full[index] : null;
+        state.requestRestoreGroup({
+          groupId: target?.id ?? null,
+          offset: target?.id === origin.groupId ? origin.offset : 0,
+          fallbackTop: origin.scrollTop,
+        });
+        state.setSearch(
+          "",
+          target ? Math.floor(index / state.pageSize) + 1 : 1,
+        );
+        return;
+      }
+
+      state.setSearch(value);
+    },
+    [visibleGroups, pageData.page, pageSize],
+  );
 
   const activeDataset = datasets.find((d) => d.id === activeDatasetId) ?? null;
   const cleanupRunsUsed = activeDataset?.aiCleanupRuns ?? 0;
@@ -435,6 +620,7 @@ export function AppShell() {
                   cleanupLimitReached={cleanupLimitReached}
                   suggestionCount={mergeSuggestions.length}
                   onOpenSuggestions={() => setSuggestionsOpen(true)}
+                  onSearchChange={handleSearchChange}
                 />
               </div>
             ) : (
@@ -524,7 +710,7 @@ export function AppShell() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    useAppStore.getState().setSearch("");
+                    useAppStore.getState().setSearch("", 1);
                     useAppStore.getState().setCategoryFilter(null);
                     useAppStore.getState().setQuickFilter("all");
                   }}

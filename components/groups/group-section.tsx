@@ -208,6 +208,8 @@ export const GroupSection = memo(function GroupSection({
 
   return (
     <section
+      data-group-id={group.id}
+      data-group-number={group.number}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={(event) => void handleDrop(event)}

@@ -79,6 +79,7 @@ export function GroupHeaderControls({
   cleanupLimitReached,
   suggestionCount,
   onOpenSuggestions,
+  onSearchChange,
 }: {
   onExport: () => void;
   isExporting: boolean;
@@ -90,9 +91,9 @@ export function GroupHeaderControls({
   cleanupLimitReached: boolean;
   suggestionCount: number;
   onOpenSuggestions: () => void;
+  onSearchChange: (value: string) => void;
 }) {
   const search = useAppStore((s) => s.search);
-  const setSearch = useAppStore((s) => s.setSearch);
   const categoryFilter = useAppStore((s) => s.categoryFilter);
   const setCategoryFilter = useAppStore((s) => s.setCategoryFilter);
   const sortBy = useAppStore((s) => s.sortBy);
@@ -124,10 +125,27 @@ export function GroupHeaderControls({
         />
         <Input
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          onChange={(event) => onSearchChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && search) {
+              event.preventDefault();
+              onSearchChange("");
+            }
+          }}
           placeholder="Пошук за назвою, артикулом або id…"
-          className="pl-8"
+          className={search ? "pr-8 pl-8" : "pl-8"}
         />
+        {search ? (
+          <button
+            type="button"
+            onClick={() => onSearchChange("")}
+            aria-label="Очистити пошук"
+            title="Очистити пошук"
+            className="absolute top-1/2 right-2 flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
+          </button>
+        ) : null}
       </div>
 
       <DropdownMenu>

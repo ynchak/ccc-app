@@ -262,6 +262,39 @@ test("store: импорт, переименование, перенос, уда�
   assert.equal(state.cardSize, 340);
   assert.equal(state.page, 1);
 
+  // Последняя просмотренная группа сохраняется и восстанавливается при
+  // повторном открытии файла.
+  useAppStore.getState().setCategoryFilter(null);
+  useAppStore.getState().setQuickFilter("all");
+  state = useAppStore.getState();
+  const { filterVisibleGroups } = await import("@/lib/store/app-store");
+  const visible = filterVisibleGroups({
+    groups: state.groups,
+    products: state.products,
+    orderedGroupIds: state.orderedGroupIds,
+    sortBy: state.sortBy,
+    search: "",
+    categoryFilter: state.categoryFilter,
+    quickFilter: state.quickFilter,
+  });
+  const lastVisible = visible[visible.length - 1];
+  assert.ok(lastVisible);
+
+  useAppStore.getState().setLastViewedGroupNumber(lastVisible.number);
+  state = useAppStore.getState();
+  assert.equal(
+    state.filtersByDataset[String(datasetId)]?.lastViewedGroupNumber,
+    lastVisible.number,
+  );
+
+  await useAppStore.getState().switchDataset(datasetId);
+  state = useAppStore.getState();
+  assert.equal(state.restoreGroupRequest?.groupId, lastVisible.id);
+  assert.equal(
+    state.page,
+    Math.floor((visible.length - 1) / state.pageSize) + 1,
+  );
+
   // Второй файл импортируется и удаляется без потери первого.
   const second = await useAppStore
     .getState()
@@ -296,4 +329,13 @@ test("store: импорт, переименование, перенос, уда�
   assert.equal(canceled, null);
   assert.equal(previewCalled, true);
   assert.equal(useAppStore.getState().datasets.length, datasetsBefore);
+});
+
+test("findGroupIndexByNumber: точное совпадение и ближайший номер", async () => {
+  const { findGroupIndexByNumber } = await import("@/lib/store/app-store");
+  const groups = [1, 5, 9].map((number) => ({ number })) as unknown as Group[];
+  assert.equal(findGroupIndexByNumber(groups, 5), 1);
+  assert.equal(findGroupIndexByNumber(groups, 6), 1);
+  assert.equal(findGroupIndexByNumber(groups, 8), 2);
+  assert.equal(findGroupIndexByNumber([], 3), -1);
 });
