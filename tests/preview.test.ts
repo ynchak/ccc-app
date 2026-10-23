@@ -54,12 +54,12 @@ test("preview рахує товари без фото, биті посиланн
 
   assert.equal(preview.totalProducts, 5);
   assert.equal(preview.totalGroups, 4);
-  assert.equal(preview.productsWithoutPhotos, 1);
+  assert.equal(preview.productsWithoutPhotos, 2);
   assert.equal(preview.productsWithInvalidUrls, 1);
   assert.equal(preview.invalidPhotoUrls, 1);
-  assert.equal(preview.groupsWithoutPhotos, 1);
+  assert.equal(preview.groupsWithoutPhotos, 2);
   assert.equal(preview.singletonGroups, 3);
-  assert.equal(preview.noPhotoPercent, 20);
+  assert.equal(preview.noPhotoPercent, 40);
   assert.deepEqual(
     preview.issues.map((issue) => issue.reason),
     ["no-photo", "invalid-url", "singleton"],

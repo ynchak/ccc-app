@@ -312,7 +312,7 @@ export function ImportDialog({
                 value={preview.totalGroups}
               />
               <PreviewStat
-                label="Без фото"
+                label="Без придатних фото"
                 value={preview.productsWithoutPhotos}
                 alert={preview.noPhotoPercent > 10}
               />
@@ -334,14 +334,14 @@ export function ImportDialog({
 
             {preview.noPhotoPercent > 10 ? (
               <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-                У {Math.round(preview.noPhotoPercent)}% товарів немає фото.
-                Групування за фото буде неефективним, і багато товарів стануть
-                окремими групами.
+                У {Math.round(preview.noPhotoPercent)}% товарів немає придатних
+                фото. Групування за фото буде неефективним, і багато товарів
+                стануть окремими групами.
               </div>
             ) : preview.noPhotoPercent > 0 ? (
               <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
-                У {Math.round(preview.noPhotoPercent)}% товарів немає фото.
-                Перевірте, чи це очікувано.
+                У {Math.round(preview.noPhotoPercent)}% товарів немає придатних
+                фото. Перевірте, чи це очікувано.
               </div>
             ) : null}
 
@@ -378,21 +378,23 @@ export function ImportDialog({
               </div>
             ) : null}
 
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {preview.noPhotoPercent > 10 ? (
+                <p className="mr-auto text-xs text-destructive">
+                  Виправте файл і завантажте його знову.
+                </p>
+              ) : null}
               <Button
                 variant="outline"
                 onClick={() => confirmPreview(false)}
               >
                 Скасувати
               </Button>
-              <Button
-                variant={preview.noPhotoPercent > 10 ? "secondary" : "default"}
-                onClick={() => confirmPreview(true)}
-              >
-                {preview.noPhotoPercent > 10
-                  ? "Все одно імпортувати"
-                  : "Імпортувати"}
-              </Button>
+              {preview.noPhotoPercent <= 10 ? (
+                <Button onClick={() => confirmPreview(true)}>
+                  Імпортувати
+                </Button>
+              ) : null}
             </div>
           </div>
         ) : stage === "idle" || stage === "error" ? (

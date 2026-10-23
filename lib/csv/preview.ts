@@ -49,8 +49,8 @@ export function buildImportPreview(
   let groupsWithoutPhotos = 0;
 
   groups.forEach((group) => {
-    const hasPhoto = group.memberIndexes.some(
-      (index) => products[index]?.imageUrls.length > 0,
+    const hasPhoto = group.memberIndexes.some((index) =>
+      products[index]?.imageUrls.some(isValidPhotoUrl),
     );
     if (!hasPhoto) groupsWithoutPhotos++;
   });
@@ -61,7 +61,8 @@ export function buildImportPreview(
       (url) => !isValidPhotoUrl(url),
     ).length;
     const hasInvalid = invalidCount > 0;
-    const hasNoPhoto = product.imageUrls.length === 0;
+    const hasUsablePhoto = product.imageUrls.some(isValidPhotoUrl);
+    const hasNoPhoto = !hasUsablePhoto;
     if (hasNoPhoto) productsWithoutPhotos++;
     if (hasInvalid) {
       productsWithInvalidUrls++;
@@ -70,10 +71,10 @@ export function buildImportPreview(
 
     const groupIndex = groupByProduct.get(index);
     const group = groupIndex !== undefined ? groups[groupIndex] : undefined;
-    const reason: PreviewIssueReason | null = hasNoPhoto
-      ? "no-photo"
-      : hasInvalid
-        ? "invalid-url"
+    const reason: PreviewIssueReason | null = hasInvalid
+      ? "invalid-url"
+      : hasNoPhoto
+        ? "no-photo"
         : group && group.memberIndexes.length === 1
           ? "singleton"
           : null;
