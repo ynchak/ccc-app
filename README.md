@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Складка
 
-## Getting Started
+Приложение для подготовки товаров к группировке. Товары, группы и IndexedDB работают в браузере; сервер используется только для входа и прокси к OpenRouter.
 
-First, run the development server:
+## Что делает
+
+- загружает CSV с товарами;
+- группирует товары одной категории, у которых есть хотя бы одна общая ссылка на фото;
+- очищает названия групп от цвета, размера и роста через OpenRouter;
+- даёт вручную перетаскивать товары и объединять группы;
+- автоматически объединяет группы с одинаковым названием внутри категории;
+- запоминает фильтры, сортировку, размер страницы и размер карточек отдельно для каждого файла;
+- выводит группы страницами: по умолчанию 50, с выбором 25/50/100/200;
+- сохраняет результат в IndexedDB браузера;
+- экспортирует XLSX с колонками `id`, `Название`, `Категория`, `Группа`.
+
+## Запуск
+
+Скопируйте `.env.example` в `.env.local` и заполните переменные:
+
+```env
+APP_PASSWORD=пароль-для-входа
+APP_AUTH_SECRET=случайная-строка-32+-символа
+OPENROUTER_API_KEY=ключ-openrouter
+OPENROUTER_MODEL=anthropic/claude-haiku-5.5
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
+Затем:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Откройте [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Если `APP_PASSWORD` и `APP_AUTH_SECRET` не заданы, в development приложение
+открывается без входа. В production без этих переменных приложение закрыто.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Деплой на Vercel
 
-## Learn More
+Добавьте те же переменные в Vercel → Project Settings → Environment Variables
+для Production, Preview и Development. GitHub Actions не нужны: Vercel
+подхватывает изменения из репозитория.
 
-To learn more about Next.js, take a look at the following resources:
+Ключ OpenRouter лучше создать отдельный и с лимитом расходов. Пароль
+защищает и интерфейс, и `/api/clean-titles`, чтобы ключом не воспользовались
+посторонние.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Проверки
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run typecheck
+npm test
+npm run build
+```
