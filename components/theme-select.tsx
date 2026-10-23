@@ -28,7 +28,7 @@ const THEME_LABELS: Record<ThemeValue, string> = {
 };
 
 const THEME_SWATCHES: Record<"light" | "dark", { bg: string; fg: string }> = {
-  light: { bg: "#faf4ed", fg: "#286983" },
+  light: { bg: "#f7f6f3", fg: "#1c1b19" },
   dark: { bg: "#12110f", fg: "#a8b5a2" },
 };
 

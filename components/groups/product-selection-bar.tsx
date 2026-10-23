@@ -40,7 +40,7 @@ export function ProductSelectionBar({
     new Set(selectedProducts.map((product) => product.categoryId)).size > 1;
 
   return (
-    <div className="fixed bottom-4 left-1/2 z-40 flex w-[min(56rem,calc(100vw-2rem))] -translate-x-1/2 flex-wrap items-center gap-2 rounded-xl border bg-popover px-3 py-2.5 text-sm shadow-lg">
+    <div className="fixed bottom-4 left-1/2 z-40 flex w-[min(56rem,calc(100vw-2rem))] -translate-x-1/2 flex-wrap items-center gap-2 rounded-xl border bg-popover px-3 py-2.5 text-sm shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
       <span className="font-medium">Вибрано: {productsLabel(selectedCount)}</span>
 
       <Button

@@ -23,7 +23,7 @@ export function Toaster() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`flex items-start gap-2 rounded-lg border bg-popover px-3 py-2.5 text-sm shadow-lg ${
+          className={`flex items-start gap-2 rounded-lg border bg-popover px-3 py-2.5 text-sm shadow-[0_2px_8px_rgba(0,0,0,0.04)] ${
             toast.tone === "error"
               ? "border-destructive/30"
               : toast.tone === "success"
