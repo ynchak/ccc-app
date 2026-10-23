@@ -26,6 +26,8 @@ export interface Product {
 
   size: string | null;
   color: string | null;
+  /** Цвет предложен сервисом, а не пришёл из CSV. */
+  colorSource?: "suggested";
   height: string | null;
   ean: string | null;
 

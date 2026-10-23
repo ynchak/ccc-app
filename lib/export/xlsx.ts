@@ -21,6 +21,7 @@ export async function exportXlsx(
   fileName: string,
 ): Promise<void> {
   const rows = buildExportRows(products, groups, productToGroup);
+  const hasSuggestedColors = rows.some((row) => row.suggestedColor);
 
   await writeXlsxFile(rows, {
     sheet: "Групи",
@@ -69,6 +70,24 @@ export async function exportXlsx(
         width: 64,
         cell: (row: ExportRow) => ({ value: row.groupTitle, ...border }),
       },
+      ...(hasSuggestedColors
+        ? [
+            {
+              header: {
+                value: "Цвет",
+                fontWeight: "bold" as const,
+                backgroundColor: "#F4F4F5",
+                align: "center" as const,
+                ...border,
+              },
+              width: 24,
+              cell: (row: ExportRow) => ({
+                value: row.suggestedColor,
+                ...border,
+              }),
+            },
+          ]
+        : []),
     ],
   }).toFile(`${fileName.replace(/\.[^.]+$/, "")}.xlsx`);
 }

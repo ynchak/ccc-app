@@ -42,6 +42,7 @@ interface AppDB extends DBSchema {
       key: string;
       cleanedTitle: string;
       removed: string[];
+      color?: string;
       confidence: number;
       model: string;
       promptVersion: string;
@@ -187,7 +188,15 @@ export async function putGroups(groups: Group[]): Promise<void> {
   await tx.done;
 }
 
-/** Удаляет группу. */
+/** Сохраняет изменённые товары. */
+export async function putProducts(products: Product[]): Promise<void> {
+  if (products.length === 0) return;
+  const db = await getDb();
+  const tx = db.transaction("products", "readwrite");
+  await Promise.all(products.map((product) => tx.store.put(product)));
+  await tx.done;
+}
+
 export async function deleteGroup(groupId: number): Promise<void> {
   const db = await getDb();
   await db.delete("groups", groupId);

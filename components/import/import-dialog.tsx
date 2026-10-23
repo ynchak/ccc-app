@@ -9,6 +9,7 @@ import {
 } from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -92,6 +93,7 @@ export function ImportDialog({
     total: number;
   } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [suggestColors, setSuggestColors] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const busy =
@@ -103,6 +105,7 @@ export function ImportDialog({
     setFileSaved(false);
     setCleanupProgress(null);
     setIsDragging(false);
+    setSuggestColors(false);
   };
 
   const handleFile = async (file: File) => {
@@ -124,9 +127,12 @@ export function ImportDialog({
       setFileSaved(true);
       setStage("cleaning");
 
-      const result = await cleanTitlesWithLlm((done, total) => {
-        setCleanupProgress({ done, total });
-      });
+      const result = await cleanTitlesWithLlm(
+        (done, total) => {
+          setCleanupProgress({ done, total });
+        },
+        { suggestColors },
+      );
       setStage("done");
 
       if (result.skipped) {
@@ -140,6 +146,9 @@ export function ImportDialog({
           result.merged > 0 ? `об’єднано за назвою: ${result.merged}` : null,
           result.modelMerged > 0
             ? `об’єднано за моделлю: ${result.modelMerged}`
+            : null,
+          result.colorsSuggested > 0
+            ? `додано кольорів: ${result.colorsSuggested}`
             : null,
           result.suggestions.length > 0
             ? `пропозицій: ${result.suggestions.length}`
@@ -207,6 +216,20 @@ export function ImportDialog({
 
         {stage === "idle" || stage === "error" ? (
           <>
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
+              <Checkbox
+                checked={suggestColors}
+                onCheckedChange={(checked) => setSuggestColors(checked === true)}
+                aria-label="Топ продавець"
+              />
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="font-medium">Топ продавець</span>
+                <span className="text-xs text-muted-foreground">
+                  Запропонувати колір для товарів без кольору
+                </span>
+              </span>
+            </label>
+
             <div
               role="button"
               tabIndex={0}

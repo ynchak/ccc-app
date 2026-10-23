@@ -28,16 +28,36 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { Product } from "@/lib/types";
 
 /** Одна строка заполненного атрибута. */
-function Field({ label, value }: { label: string; value: string }) {
+function Field({
+  label,
+  value,
+  suggested = false,
+}: {
+  label: string;
+  value: string;
+  suggested?: boolean;
+}) {
   return (
     <div className="flex items-start justify-between gap-4 border-b py-2 text-sm last:border-b-0 sm:border-b-0 sm:py-1.5">
       <span className="shrink-0 text-muted-foreground">{label}</span>
-      <span className="text-right break-words">{value}</span>
+      <span className="flex items-center gap-1 text-right break-words">
+        {value}
+        {suggested ? (
+          <Badge
+            variant="outline"
+            className="h-4 shrink-0 border-amber-500/30 bg-amber-500/10 px-1 text-[9px] text-amber-700 dark:text-amber-300"
+            title="Колір запропоновано сервісом"
+          >
+            ШІ
+          </Badge>
+        ) : null}
+      </span>
     </div>
   );
 }
@@ -348,12 +368,18 @@ export function ProductDetailsDialog({
         { label: "Продавець", value: product.sellerTitle },
         { label: "Категорія", value: product.categoryTitle },
         { label: "Розмір", value: product.size },
-        { label: "Колір", value: product.color },
+        {
+          label: "Колір",
+          value: product.color,
+          suggested: product.colorSource === "suggested",
+        },
         { label: "Зріст", value: product.height },
         { label: "EAN", value: product.ean },
         { label: "МДГ", value: product.mdg },
       ].filter(
-        (field): field is { label: string; value: string } =>
+        (
+          field,
+        ): field is { label: string; value: string; suggested?: boolean } =>
           typeof field.value === "string" && field.value.trim().length > 0,
       )
     : [];

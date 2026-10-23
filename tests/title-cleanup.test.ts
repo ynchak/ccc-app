@@ -64,6 +64,7 @@ test("разметка color/size удаляет цвет и размер, со�
     "Женское худи New Balance Trackside Fleece Full Zip (WJ62P2UPOFG)",
   );
   assert.deepEqual(result.removed, ["серое", "34", "(XS)"]);
+  assert.equal(result.color, "серое");
 });
 
 test("article без скобок защищается по метке", () => {
@@ -131,6 +132,7 @@ test("составной цвет удаляется по метке color", () 
     result.title,
     "Классическое пальто ISSA PLUS 15906 (issa2007682874637)",
   );
+  assert.equal(result.color, "светло-бежевое");
 });
 
 test("низкая уверенность не мешает детерминированному удалению размера", () => {

@@ -14,6 +14,8 @@ export interface ExportRow {
   goodsTitle: string;
   categoryTitle: string;
   groupTitle: string;
+  /** Цвет, добавленный сервисом; исходные цвета не экспортируются. */
+  suggestedColor: string;
 }
 
 /**
@@ -39,6 +41,8 @@ export function buildExportRows(
         goodsTitle: product.goodsTitle,
         categoryTitle: product.categoryTitle,
         groupTitle: group?.title ?? "",
+        suggestedColor:
+          product.colorSource === "suggested" ? (product.color ?? "") : "",
         order: product.order,
       };
     })
@@ -58,5 +62,6 @@ export function buildExportRows(
       goodsTitle: row.goodsTitle,
       categoryTitle: row.categoryTitle,
       groupTitle: row.groupTitle,
+      suggestedColor: row.suggestedColor,
     }));
 }

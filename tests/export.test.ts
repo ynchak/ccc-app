@@ -62,12 +62,14 @@ test("экспорт сортирует строки по группе и под
       goodsTitle: "Второй",
       categoryTitle: "Категория",
       groupTitle: "Группа A",
+      suggestedColor: "",
     },
     {
       id: "1",
       goodsTitle: "Первый",
       categoryTitle: "Категория",
       groupTitle: "Группа B",
+      suggestedColor: "",
     },
   ]);
 });
@@ -103,4 +105,24 @@ test("товар без группы экспортируется с пусто�
     new Map(),
   );
   assert.equal(rows[0].groupTitle, "");
+});
+
+test("в экспорт попадает только предложенный сервисом цвет", () => {
+  const rows = buildExportRows(
+    [
+      product({
+        id: 1,
+        order: 0,
+        color: "Бежевий",
+        colorSource: "suggested",
+      }),
+      product({ id: 2, order: 1, color: "Чорний" }),
+    ],
+    [],
+    new Map(),
+  );
+  assert.deepEqual(
+    rows.map((row) => row.suggestedColor),
+    ["Бежевий", ""],
+  );
 });

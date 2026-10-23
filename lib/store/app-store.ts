@@ -16,6 +16,7 @@ import {
   getLlmCache,
   putLlmCache,
   putGroups,
+  putProducts,
   renameDataset as dbRenameDataset,
   saveDataset,
   setSetting,
@@ -33,6 +34,7 @@ import {
   fetchCleanupStatus,
 } from "@/lib/llm/client";
 import type { CleanTitleInput, CleanTitleResult } from "@/lib/llm/title-cleanup";
+import { applySuggestedColors } from "@/lib/llm/color-suggestions";
 import {
   JevNotConfiguredError,
   JevRequestError,
@@ -103,6 +105,8 @@ export interface CleanupRunResult {
   merged: number;
   /** Сколько групп объединено вторым слоем Jev. */
   modelMerged: number;
+  /** Сколько товаров получили предложенный цвет. */
+  colorsSuggested: number;
   /** Пары, которые Jev считает вероятными, но не автоматическими. */
   suggestions: MergeSuggestion[];
   failed: number;
@@ -190,6 +194,7 @@ interface AppState {
   deleteGroup: (groupId: number) => Promise<void>;
   cleanTitlesWithLlm: (
     onProgress?: (done: number, total: number) => void,
+    options?: { suggestColors?: boolean },
   ) => Promise<CleanupRunResult>;
   resetGroupTitle: (groupId: number) => Promise<boolean>;
   applyMergeSuggestion: (aId: number, bId: number) => Promise<boolean>;
@@ -1192,7 +1197,7 @@ export const useAppStore = create<AppState>()(
       await commit(state.groups, next, "Групу видалено");
     },
 
-    async cleanTitlesWithLlm(onProgress) {
+    async cleanTitlesWithLlm(onProgress, options) {
       const state = get();
       const datasetId = state.activeDatasetId;
       const candidates = [...state.groups.values()].filter(
@@ -1208,6 +1213,7 @@ export const useAppStore = create<AppState>()(
           cleaned: 0,
           merged: 0,
           modelMerged: 0,
+          colorsSuggested: 0,
           suggestions: [],
           failed: 0,
           jevSkipped: false,
@@ -1228,6 +1234,7 @@ export const useAppStore = create<AppState>()(
               cleaned: 0,
               merged: 0,
               modelMerged: 0,
+              colorsSuggested: 0,
               suggestions: [],
               failed: 0,
               jevSkipped: true,
@@ -1244,6 +1251,7 @@ export const useAppStore = create<AppState>()(
             cleaned: 0,
             merged: 0,
             modelMerged: 0,
+            colorsSuggested: 0,
             suggestions: [],
             failed: 0,
             jevSkipped: true,
@@ -1278,6 +1286,7 @@ export const useAppStore = create<AppState>()(
               title: cached.cleanedTitle,
               originalTitle: input.title,
               removed: cached.removed,
+              color: cached.color,
               confidence: cached.confidence,
             });
           } else {
@@ -1318,6 +1327,7 @@ export const useAppStore = create<AppState>()(
                   key: cleanupCacheKey(input, status.model, status.promptVersion),
                   cleanedTitle: result.title,
                   removed: result.removed,
+                  color: result.color,
                   confidence: result.confidence,
                   model: status.model,
                   promptVersion: status.promptVersion,
@@ -1331,6 +1341,7 @@ export const useAppStore = create<AppState>()(
             cleaned: 0,
             merged: 0,
             modelMerged: 0,
+            colorsSuggested: 0,
             suggestions: [],
             failed: 0,
             jevSkipped: true,
@@ -1360,6 +1371,7 @@ export const useAppStore = create<AppState>()(
             cleaned: 0,
             merged: 0,
             modelMerged: 0,
+            colorsSuggested: 0,
             suggestions: [],
             failed: 0,
             jevSkipped: true,
@@ -1375,12 +1387,32 @@ export const useAppStore = create<AppState>()(
             cleaned: 0,
             merged: 0,
             modelMerged: 0,
+            colorsSuggested: 0,
             suggestions: [],
             failed: total,
             jevSkipped: false,
             jevFailed: false,
             skipped: false,
           };
+        }
+
+        let products = state.products;
+        let colorsSuggested = 0;
+        if (options?.suggestColors) {
+          const titleColors = new Map<number, string | undefined>();
+          for (const group of state.groups.values()) {
+            titleColors.set(group.id, results.get(String(group.id))?.color);
+          }
+          const applied = applySuggestedColors(
+            state.groups.values(),
+            state.products,
+            titleColors,
+          );
+          if (applied.changed.length > 0) {
+            products = applied.products;
+            colorsSuggested = applied.count;
+            await putProducts(applied.changed);
+          }
         }
 
         let next = new Map(state.groups);
@@ -1492,6 +1524,7 @@ export const useAppStore = create<AppState>()(
                   cleaned: 0,
                   merged: 0,
                   modelMerged: 0,
+                  colorsSuggested: 0,
                   suggestions: [],
                   failed: total,
                   jevSkipped,
@@ -1532,13 +1565,14 @@ export const useAppStore = create<AppState>()(
               : "Назви очищено ШІ",
           );
         }
-        set({ mergeSuggestions: suggestions });
+        set({ mergeSuggestions: suggestions, products });
 
         return {
           total,
           cleaned: cleanedCount,
           merged,
           modelMerged,
+          colorsSuggested,
           suggestions,
           failed,
           jevSkipped,

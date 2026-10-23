@@ -36,10 +36,12 @@ export interface CleanTitleResult {
   title: string;
   originalTitle: string;
   removed: string[];
+  /** Нормализованный цвет, найденный в исходном названии. */
+  color?: string;
   confidence: number;
 }
 
-export const CLEANUP_PROMPT_VERSION = "clean-color-size-height-v3";
+export const CLEANUP_PROMPT_VERSION = "clean-color-size-height-v4";
 
 const REMOVABLE_LABELS = new Set<TitleLabel>(["color", "size", "height"]);
 
@@ -118,6 +120,7 @@ export function applyModelResults(
         : null;
     const sizeAnchor = findSizeAnchor(tokens, input.size);
     const remove = new Set<number>();
+    const colors: string[] = [];
 
     if (labels) {
       labels.forEach((rawLabel, index) => {
@@ -128,6 +131,7 @@ export function applyModelResults(
         const token = tokens[index];
         if (brandProtected(token, input.brand)) return;
         if (articleProtected(token, input.article)) return;
+        if (rawLabel === "color") colors.push(normalizeToken(token));
 
         // Числа до найденного размера — это, скорее всего, номер модели.
         // Для буквенного размера разрешаем одно число непосредственно перед ним.
@@ -174,6 +178,7 @@ export function applyModelResults(
       title: safeCleaned,
       originalTitle: input.title,
       removed: safeCleaned === input.title ? [] : removedTokens,
+      color: colors.length > 0 ? colors.join(" ") : undefined,
       confidence: modelResult?.confidence ?? 0,
     };
   });
