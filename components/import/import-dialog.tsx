@@ -159,6 +159,7 @@ export function ImportDialog({
         );
       }
 
+      reset();
       onOpenChange(false);
     } catch (caught) {
       const message =
@@ -172,6 +173,7 @@ export function ImportDialog({
           `Файл загружен, но названия не очищены: ${message}`,
           "error",
         );
+        reset();
         onOpenChange(false);
         return;
       }
