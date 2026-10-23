@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useState, type DragEvent, type MouseEvent } from "react";
+import { cn } from "cn";
 import Image from "next/image";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -305,20 +306,20 @@ export const ProductCard = memo(function ProductCard({
               href={gomerUrl}
               target="_blank"
               rel="noreferrer"
-              className={`${buttonVariants({
-                variant: "outline",
-                size: "xs",
-              })} text-muted-foreground hover:text-foreground`}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "xs" }),
+                "border-orange-500/30 bg-orange-500/5 text-orange-700/80 hover:bg-orange-500/10 hover:text-orange-700 dark:text-orange-300/80 dark:hover:text-orange-200",
+              )}
               title="Открыть товар в Gomer"
             >
               Gomer
             </a>
           ) : (
             <span
-              className={`${buttonVariants({
-                variant: "outline",
-                size: "xs",
-              })} cursor-default text-muted-foreground/50`}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "xs" }),
+                "cursor-default border-orange-500/20 bg-orange-500/5 text-orange-700/40 dark:text-orange-300/40",
+              )}
               title="Нет gomer_sync_source_id"
             >
               Gomer
@@ -330,10 +331,10 @@ export const ProductCard = memo(function ProductCard({
               href={rozetkaUrl}
               target="_blank"
               rel="noreferrer"
-              className={`${buttonVariants({
-                variant: "outline",
-                size: "xs",
-              })} text-muted-foreground hover:text-foreground`}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "xs" }),
+                "border-emerald-500/30 bg-emerald-500/5 text-emerald-700/80 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-300/80 dark:hover:text-emerald-200",
+              )}
               title="Открыть товар на Rozetka"
             >
               RZ
