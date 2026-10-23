@@ -257,3 +257,34 @@ test("лимит пар растёт вместе с числом групп", (
   assert.equal(candidateLimitFor(1900), 7600);
   assert.equal(candidateLimitFor(5000), 8000);
 });
+
+test("Jev отримує компактний профіль пари", () => {
+  const products = new Map<number, Product>([
+    [1, product(1, {
+      goodsTitle: "Куртка Zara 4302207 синя",
+      goodsArticle: "4302207-navyblue-XXL",
+      mdg: "4302207_синій",
+    })],
+    [2, product(2, {
+      goodsTitle: "Куртка Zara 4302207 сіра",
+      goodsArticle: "4302207-stone-L",
+      mdg: "4302207_сірий",
+    })],
+  ]);
+  const groups = new Map([
+    [1, group(1, [1])],
+    [2, group(2, [2])],
+  ]);
+  const jevPair = pair(groups.get(1)!, groups.get(2)!, products);
+  const body = buildJevRequestBody([jevPair], "typesafe/jev-1.14");
+  const state = body.state as {
+    pairs: Array<{ a: Record<string, unknown>; b: Record<string, unknown> }>;
+  };
+  const a = state.pairs[0].a;
+  assert.equal(a.code, "4302207");
+  assert.equal(a.title, "Группа 1");
+  assert.equal("rawTitle" in a, false);
+  assert.equal("category" in a, false);
+  assert.equal("article" in a, false);
+  assert.equal("articleBase" in a, false);
+});

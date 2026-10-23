@@ -53,6 +53,7 @@ import {
   matchPairsBatch,
 } from "@/lib/jev/client";
 import { buildJevGroupProfile, generateCandidatePairs } from "@/lib/jev/candidates";
+import { mergeGroupsByArticleCode } from "@/lib/jev/code-merge";
 import { applyJevDecisions } from "@/lib/jev/merge";
 import type {
   CandidatePair,
@@ -117,6 +118,8 @@ export interface CleanupRunResult {
   merged: number;
   /** Сколько групп объединено вторым слоем Jev. */
   modelMerged: number;
+  /** Сколько групп объединено по articleBase. */
+  codeMerged: number;
   /** Сколько товаров получили предложенный цвет. */
   colorsSuggested: number;
   /** Стоимость запросов ИИ за этот запуск, USD. */
@@ -1246,6 +1249,7 @@ export const useAppStore = create<AppState>()(
           cleaned: 0,
           merged: 0,
           modelMerged: 0,
+          codeMerged: 0,
           colorsSuggested: 0,
           costUsd: 0,
           suggestions: [],
@@ -1280,6 +1284,7 @@ export const useAppStore = create<AppState>()(
               cleaned: 0,
               merged: 0,
               modelMerged: 0,
+              codeMerged: 0,
               colorsSuggested: 0,
               costUsd: 0,
               suggestions: [],
@@ -1298,6 +1303,7 @@ export const useAppStore = create<AppState>()(
             cleaned: 0,
             merged: 0,
             modelMerged: 0,
+            codeMerged: 0,
             colorsSuggested: 0,
             costUsd: 0,
             suggestions: [],
@@ -1399,6 +1405,7 @@ export const useAppStore = create<AppState>()(
             cleaned: 0,
             merged: 0,
             modelMerged: 0,
+            codeMerged: 0,
             colorsSuggested: 0,
             costUsd: 0,
             suggestions: [],
@@ -1430,6 +1437,7 @@ export const useAppStore = create<AppState>()(
             cleaned: 0,
             merged: 0,
             modelMerged: 0,
+            codeMerged: 0,
             colorsSuggested: 0,
             costUsd: 0,
             suggestions: [],
@@ -1447,6 +1455,7 @@ export const useAppStore = create<AppState>()(
             cleaned: 0,
             merged: 0,
             modelMerged: 0,
+            codeMerged: 0,
             colorsSuggested: 0,
             costUsd: 0,
             suggestions: [],
@@ -1521,6 +1530,12 @@ export const useAppStore = create<AppState>()(
           }
         }
 
+        // Группы с одинаковым articleBase в одной категории и бренде
+        // объединяем без Jev.
+        const articleMerged = mergeGroupsByArticleCode(next, state.products);
+        next = articleMerged.groups;
+        const codeMerged = articleMerged.merged;
+
         // Второй слой: Jev проверяет пары групп, у которых разные названия,
         // но которые могут быть вариантами одной модели.
         let modelMerged = 0;
@@ -1589,6 +1604,7 @@ export const useAppStore = create<AppState>()(
                   cleaned: 0,
                   merged: 0,
                   modelMerged: 0,
+                  codeMerged: 0,
                   colorsSuggested: 0,
                   costUsd: 0,
                   suggestions: [],
@@ -1622,13 +1638,15 @@ export const useAppStore = create<AppState>()(
           }
         }
 
-        if (cleanedCount > 0 || merged > 0 || modelMerged > 0) {
+        if (cleanedCount > 0 || merged > 0 || codeMerged > 0 || modelMerged > 0) {
           await commit(
             state.groups,
             next,
             modelMerged > 0
               ? "Назви очищено, групи об’єднано за моделлю"
-              : "Назви очищено ШІ",
+              : codeMerged > 0
+                ? "Назви очищено, групи об’єднано за артикулом"
+                : "Назви очищено ШІ",
           );
         }
         if (costUsd > 0 && datasetId !== null) {
@@ -1651,6 +1669,7 @@ export const useAppStore = create<AppState>()(
           total,
           cleaned: cleanedCount,
           merged,
+          codeMerged,
           modelMerged,
           colorsSuggested,
           costUsd,

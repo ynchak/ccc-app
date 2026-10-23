@@ -224,6 +224,9 @@ export function ImportDialog({
         const parts = [
           result.cleaned > 0 ? `очищено назв: ${result.cleaned}` : null,
           result.merged > 0 ? `об’єднано за назвою: ${result.merged}` : null,
+          result.codeMerged > 0
+            ? `об’єднано за артикулом: ${result.codeMerged}`
+            : null,
           result.modelMerged > 0
             ? `об’єднано за моделлю: ${result.modelMerged}`
             : null,

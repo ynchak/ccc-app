@@ -1,6 +1,6 @@
 import type { JevPair, JevPairResult } from "@/lib/jev/types";
 
-export const JEV_PROMPT_VERSION = "jev-same-model-v2";
+export const JEV_PROMPT_VERSION = "jev-same-model-v3";
 export const DEFAULT_JEV_MODEL = "typesafe/jev-1.14";
 
 interface JevQuestion {
@@ -15,28 +15,20 @@ export interface JevRequestBody {
   questions: Record<string, JevQuestion>;
 }
 
+function compactProfile(profile: JevPair["a"]) {
+  const result: Record<string, unknown> = { title: profile.title };
+  if (profile.brand) result.brand = profile.brand;
+  const code = profile.articleBase || profile.article;
+  if (code) result.code = code;
+  if (profile.mdg) result.mdg = profile.mdg;
+  if (profile.examples?.length) result.examples = profile.examples;
+  return result;
+}
+
 function compactPair(pair: JevPair) {
   return {
-    a: {
-      title: pair.a.title,
-      rawTitle: pair.a.rawTitle ?? "",
-      category: pair.a.category ?? "",
-      brand: pair.a.brand ?? "",
-      mdg: pair.a.mdg ?? "",
-      article: pair.a.article ?? "",
-      articleBase: pair.a.articleBase ?? "",
-      examples: pair.a.examples ?? [],
-    },
-    b: {
-      title: pair.b.title,
-      rawTitle: pair.b.rawTitle ?? "",
-      category: pair.b.category ?? "",
-      brand: pair.b.brand ?? "",
-      mdg: pair.b.mdg ?? "",
-      article: pair.b.article ?? "",
-      articleBase: pair.b.articleBase ?? "",
-      examples: pair.b.examples ?? [],
-    },
+    a: compactProfile(pair.a),
+    b: compactProfile(pair.b),
   };
 }
 
