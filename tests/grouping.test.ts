@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { parseCsv } from "@/lib/csv/parse";
 import {
   clusterByPhotos,
+  hasStrongPhotoOverlap,
   normalizeTitle,
   toGroups,
 } from "@/lib/grouping/cluster";
@@ -100,12 +101,16 @@ test("общая ссылка на фото объединяет товары в
     product({
       goodsId: "1",
       order: 0,
-      imageUrls: ["https://img/1.jpg", "https://img/2.jpg"],
+      imageUrls: [
+        "https://img/1.jpg",
+        "https://img/2.jpg",
+        "https://img/3.jpg",
+      ],
     }),
     product({
       goodsId: "2",
       order: 1,
-      imageUrls: ["https://img/2.jpg", "https://img/3.jpg"],
+      imageUrls: ["https://img/1.jpg", "https://img/2.jpg"],
     }),
     product({
       goodsId: "3",
@@ -118,6 +123,33 @@ test("общая ссылка на фото объединяет товары в
   assert.equal(clusters.length, 2);
   assert.deepEqual(clusters[0].memberIndexes, [0, 1]);
   assert.deepEqual(clusters[1].memberIndexes, [2]);
+});
+
+test("одного общего фото из большого набора недостаточно", () => {
+  const products = [
+    product({
+      goodsId: "1",
+      order: 0,
+      imageUrls: Array.from({ length: 8 }, (_, i) => `https://img/a-${i}.jpg`),
+    }),
+    product({
+      goodsId: "2",
+      order: 1,
+      imageUrls: [
+        "https://img/a-0.jpg",
+        ...Array.from({ length: 6 }, (_, i) => `https://img/b-${i}.jpg`),
+      ],
+    }),
+  ];
+
+  const clusters = clusterByPhotos(products);
+  assert.equal(clusters.length, 2);
+});
+
+test("порог сильного совпадения фото — 80%", () => {
+  assert.equal(hasStrongPhotoOverlap(1, 8, 7), false);
+  assert.equal(hasStrongPhotoOverlap(4, 5, 5), true);
+  assert.equal(hasStrongPhotoOverlap(1, 1, 1), true);
 });
 
 test("одинаковые фото не объединяют товары разных категорий", () => {

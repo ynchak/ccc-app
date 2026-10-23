@@ -3,13 +3,16 @@ import type { ParsedProduct } from "@/lib/types";
 /**
  * Кластеризация товаров по фотографиям.
  *
- * Два товара относятся к одной группе, если у них есть хотя бы одна общая
- * ссылка на фото. Сравнение идёт внутри одной категории: товары из разных
+ * Два товара относятся к одной группе, если у них достаточно большая доля
+ * общих фото. Сравнение идёт внутри одной категории: товары из разных
  * категорий не объединяются никогда.
  *
- * Инвертированный индекс URL → товары позволяет не перебирать все пары, а
- * смотреть только товары, у которых реально есть общий URL.
+ * Одного общего фото из большого набора недостаточно: это часто бывает у
+ * похожих, но разных моделей. Считаем долю общих фото от меньшего набора.
  */
+
+/** Минимальная доля общих фото для объединения. */
+export const PHOTO_OVERLAP_THRESHOLD = 0.8;
 
 /** Кластер товаров. */
 export interface Cluster {
@@ -47,30 +50,46 @@ class UnionFind {
   }
 }
 
+/** Проверяет, достаточно ли общих фото для объединения. */
+export function hasStrongPhotoOverlap(
+  sharedCount: number,
+  firstCount: number,
+  secondCount: number,
+): boolean {
+  const minCount = Math.min(firstCount, secondCount);
+  return minCount > 0 && sharedCount / minCount >= PHOTO_OVERLAP_THRESHOLD;
+}
+
 /**
  * Группирует товары по общим ссылкам на фото.
  *
- * Каждый URL даёт набор товаров. Внутри одной категории все товары с этим URL
- * попадают в один кластер. Разные URL связывают кластеры транзитивно.
+ * Сначала считаем количество общих фото для каждой пары товаров внутри
+ * категории. Затем объединяем только пары, у которых доля общих фото
+ * достигает PHOTO_OVERLAP_THRESHOLD.
  */
 export function clusterByPhotos(products: ParsedProduct[]): Cluster[] {
   const uf = new UnionFind(products.length);
+  const photoSets = products.map(
+    (product) => new Set(product.imageUrls.filter(Boolean)),
+  );
   const urlIndex = new Map<string, number[]>();
 
   products.forEach((product, index) => {
-    for (const url of new Set(product.imageUrls)) {
-      if (!url) continue;
+    for (const url of photoSets[index]) {
       const list = urlIndex.get(url);
       if (list) list.push(index);
       else urlIndex.set(url, [index]);
     }
   });
 
+  const sharedCounts = new Map<number, number>();
+  const pairKey = (a: number, b: number) =>
+    Math.min(a, b) * products.length + Math.max(a, b);
+
   for (const indexes of urlIndex.values()) {
     if (indexes.length < 2) continue;
 
-    // Один и тот же URL может встречаться в разных категориях. Объединяем
-    // только товары внутри категории.
+    // Один URL может встречаться в разных категориях.
     const byCategory = new Map<string, number[]>();
     for (const index of indexes) {
       const categoryId = products[index].categoryId;
@@ -80,9 +99,26 @@ export function clusterByPhotos(products: ParsedProduct[]): Cluster[] {
     }
 
     for (const categoryIndexes of byCategory.values()) {
-      for (let i = 1; i < categoryIndexes.length; i++) {
-        uf.union(categoryIndexes[0], categoryIndexes[i]);
+      for (let i = 0; i < categoryIndexes.length; i++) {
+        for (let j = i + 1; j < categoryIndexes.length; j++) {
+          const key = pairKey(categoryIndexes[i], categoryIndexes[j]);
+          sharedCounts.set(key, (sharedCounts.get(key) ?? 0) + 1);
+        }
       }
+    }
+  }
+
+  for (const [key, sharedCount] of sharedCounts) {
+    const first = Math.floor(key / products.length);
+    const second = key % products.length;
+    if (
+      hasStrongPhotoOverlap(
+        sharedCount,
+        photoSets[first].size,
+        photoSets[second].size,
+      )
+    ) {
+      uf.union(first, second);
     }
   }
 
