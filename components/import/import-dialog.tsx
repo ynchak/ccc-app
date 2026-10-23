@@ -18,11 +18,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatUsd } from "@/lib/ai-cost";
+import type { ImportPreviewSummary } from "@/lib/csv/preview";
 import { useAppStore } from "@/lib/store/app-store";
 import { notify } from "@/lib/store/toast-store";
 
 type Stage =
   | "idle"
+  | "preview"
   | "grouping"
   | "saving"
   | "cleaning"
@@ -69,6 +71,40 @@ function Step({
   );
 }
 
+function PreviewStat({
+  label,
+  value,
+  alert = false,
+}: {
+  label: string;
+  value: number;
+  alert?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5 rounded-md border bg-muted/20 px-3 py-2">
+      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <span
+        className={`text-lg leading-none font-semibold tabular-nums ${
+          alert ? "text-destructive" : ""
+        }`}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function issueLabel(reason: "no-photo" | "invalid-url" | "singleton"): string {
+  switch (reason) {
+    case "no-photo":
+      return "Немає фото";
+    case "invalid-url":
+      return "Некоректні посилання";
+    default:
+      return "Одиночна група";
+  }
+}
+
 /**
  * Импорт CSV: группировка по фото, сохранение и очистка названий ИИ.
  */
@@ -99,6 +135,8 @@ export function ImportDialog({
     done: number;
     total: number;
   } | null>(null);
+  const [preview, setPreview] = useState<ImportPreviewSummary | null>(null);
+  const previewResolverRef = useRef<((proceed: boolean) => void) | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const busy =
@@ -110,8 +148,32 @@ export function ImportDialog({
     setFileSaved(false);
     setCleanupProgress(null);
     setModelProgress(null);
+    setPreview(null);
     setIsDragging(false);
     setSuggestColors(false);
+  };
+
+  const resolvePreview = (proceed: boolean) => {
+    const resolve = previewResolverRef.current;
+    previewResolverRef.current = null;
+    setPreview(null);
+    resolve?.(proceed);
+  };
+
+  const handlePreview = (summary: ImportPreviewSummary) => {
+    setPreview(summary);
+    setStage("preview");
+    return new Promise<boolean>((resolve) => {
+      previewResolverRef.current = resolve;
+    });
+  };
+
+  const confirmPreview = (proceed: boolean) => {
+    resolvePreview(proceed);
+    if (!proceed) {
+      reset();
+      onOpenChange(false);
+    }
   };
 
   const handleFile = async (file: File) => {
@@ -127,9 +189,15 @@ export function ImportDialog({
         throw new Error("Файл порожній — немає даних для групування.");
       }
 
-      await importFile(file.name, content, (nextStage) => {
-        setStage(nextStage);
-      });
+      const imported = await importFile(
+        file.name,
+        content,
+        (nextStage) => {
+          setStage(nextStage);
+        },
+        handlePreview,
+      );
+      if (!imported) return;
       setFileSaved(true);
       setStage("cleaning");
 
@@ -209,6 +277,9 @@ export function ImportDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
+        if (!next && stageRef.current === "preview") {
+          resolvePreview(false);
+        }
         const isWorking =
           stageRef.current === "grouping" ||
           stageRef.current === "saving" ||
@@ -218,7 +289,7 @@ export function ImportDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Завантаження CSV</DialogTitle>
           <DialogDescription>
@@ -227,7 +298,102 @@ export function ImportDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {stage === "idle" || stage === "error" ? (
+        {stage === "preview" && preview ? (
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-2">
+              <PreviewStat
+                label="Товарів"
+                value={preview.totalProducts}
+              />
+              <PreviewStat
+                label="Груп після фото"
+                value={preview.totalGroups}
+              />
+              <PreviewStat
+                label="Без фото"
+                value={preview.productsWithoutPhotos}
+                alert={preview.noPhotoPercent > 10}
+              />
+              <PreviewStat
+                label="Некоректних посилань"
+                value={preview.invalidPhotoUrls}
+                alert={preview.invalidPhotoUrls > 0}
+              />
+              <PreviewStat
+                label="Одиночних груп"
+                value={preview.singletonGroups}
+              />
+              <PreviewStat
+                label="Груп без фото"
+                value={preview.groupsWithoutPhotos}
+                alert={preview.groupsWithoutPhotos > 0}
+              />
+            </div>
+
+            {preview.noPhotoPercent > 10 ? (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                У {Math.round(preview.noPhotoPercent)}% товарів немає фото.
+                Групування за фото буде неефективним, і багато товарів стануть
+                окремими групами.
+              </div>
+            ) : preview.noPhotoPercent > 0 ? (
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+                У {Math.round(preview.noPhotoPercent)}% товарів немає фото.
+                Перевірте, чи це очікувано.
+              </div>
+            ) : null}
+
+            {preview.invalidPhotoUrls > 0 ? (
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+                Знайдено некоректні посилання на фото:{" "}
+                {preview.invalidPhotoUrls}. Такі товари можуть стати окремими
+                групами.
+              </div>
+            ) : null}
+
+            {preview.issues.length > 0 ? (
+              <div className="flex flex-col gap-1.5 rounded-lg border p-3">
+                <span className="text-xs font-medium">Проблемні товари</span>
+                <div className="flex max-h-48 flex-col overflow-y-auto">
+                  {preview.issues.map((issue) => (
+                    <div
+                      key={`${issue.goodsId}-${issue.reason}`}
+                      className="border-b py-1.5 last:border-b-0"
+                    >
+                      <p
+                        className="truncate text-xs"
+                        title={issue.title}
+                      >
+                        {issue.title}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {issueLabel(issue.reason)} · ID {issue.goodsId} · фото:{" "}
+                        {issue.imageCount}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => confirmPreview(false)}
+              >
+                Скасувати
+              </Button>
+              <Button
+                variant={preview.noPhotoPercent > 10 ? "secondary" : "default"}
+                onClick={() => confirmPreview(true)}
+              >
+                {preview.noPhotoPercent > 10
+                  ? "Все одно імпортувати"
+                  : "Імпортувати"}
+              </Button>
+            </div>
+          </div>
+        ) : stage === "idle" || stage === "error" ? (
           <>
             <label className="flex cursor-pointer items-start gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
               <Checkbox

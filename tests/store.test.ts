@@ -266,6 +266,7 @@ test("store: импорт, переименование, перенос, уда�
   const second = await useAppStore
     .getState()
     .importFile("test-data-second.csv", text);
+  assert.ok(second);
   assert.equal(useAppStore.getState().datasets.length, 2);
   assert.equal(useAppStore.getState().activeDatasetId, second.datasetId);
 
@@ -282,5 +283,17 @@ test("store: импорт, переименование, перенос, уда�
     useAppStore.getState().importFile("empty.csv", "goods_id\n"),
     /не знайдено/,
   );
+  assert.equal(useAppStore.getState().datasets.length, datasetsBefore);
+
+  // Отмена предпросмотра не создаёт датасет.
+  let previewCalled = false;
+  const canceled = await useAppStore
+    .getState()
+    .importFile("cancel.csv", text, undefined, async () => {
+      previewCalled = true;
+      return false;
+    });
+  assert.equal(canceled, null);
+  assert.equal(previewCalled, true);
   assert.equal(useAppStore.getState().datasets.length, datasetsBefore);
 });

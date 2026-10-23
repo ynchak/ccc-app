@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { parseAndGroupCsv } from "@/lib/csv/import-worker";
+import { buildImportPreview, type ImportPreviewSummary } from "@/lib/csv/preview";
 import {
   addGroup,
   deleteDataset as dbDeleteDataset,
@@ -167,7 +168,8 @@ interface AppState {
     fileName: string,
     text: string,
     onStage?: (stage: "grouping" | "saving") => void,
-  ) => Promise<{ datasetId: number; autoMergedCount: number }>;
+    onPreview?: (summary: ImportPreviewSummary) => Promise<boolean>,
+  ) => Promise<{ datasetId: number; autoMergedCount: number } | null>;
   switchDataset: (datasetId: number) => Promise<void>;
   removeDataset: (datasetId: number) => Promise<void>;
   renameDataset: (datasetId: number, name: string) => Promise<boolean>;
@@ -590,7 +592,7 @@ export const useAppStore = create<AppState>()(
       await get().switchDataset(active.id);
     },
 
-    async importFile(fileName, text, onStage) {
+    async importFile(fileName, text, onStage, onPreview) {
       set({ isLoading: true });
       try {
         onStage?.("grouping");
@@ -601,6 +603,15 @@ export const useAppStore = create<AppState>()(
           groups: merged,
           autoMergedCount,
         } = await parseAndGroupCsv(text);
+
+        if (onPreview) {
+          set({ isLoading: false });
+          const proceed = await onPreview(
+            buildImportPreview(parsed, merged),
+          );
+          if (!proceed) return null;
+          set({ isLoading: true });
+        }
 
         // Номера групп задаются один раз при импорте — в порядке текущей
         // сортировки (категория, затем название). Дальше они не меняются.
