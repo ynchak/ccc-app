@@ -101,7 +101,7 @@ export const ProductCard = memo(function ProductCard({
       <div className="relative aspect-square w-full overflow-hidden bg-muted">
         <button
           type="button"
-          className="absolute inset-0 flex cursor-zoom-in items-center justify-center p-2 disabled:cursor-default"
+          className="absolute inset-0 flex cursor-zoom-in items-center justify-center p-0 disabled:cursor-default"
           onClick={() => setLightboxOpen(true)}
           disabled={!currentImage || imageFailed}
           aria-label="Збільшити фото"
@@ -114,7 +114,7 @@ export const ProductCard = memo(function ProductCard({
                 alt={product.goodsTitle}
                 fill
                 sizes="(max-width: 640px) 100vw, 320px"
-                className="object-contain"
+                className="object-cover"
                 unoptimized
                 draggable={false}
                 onError={handleImageError}
