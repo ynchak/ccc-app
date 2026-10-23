@@ -15,6 +15,7 @@ import {
   loadGroups,
   loadProducts,
   getLlmCache,
+  putGroup,
   putLlmCache,
   putGroups,
   putProducts,
@@ -71,7 +72,8 @@ import {
   isPageSize,
   type PageSize,
 } from "@/lib/pagination";
-import type { Dataset, Group, Product } from "@/lib/types";
+import { sortGroupProducts } from "@/lib/grouping/product-sort";
+import type { Dataset, Group, Product, ProductSort } from "@/lib/types";
 
 /** Сортировка групп. */
 export type SortBy = "order" | "title" | "count" | "category";
@@ -187,6 +189,10 @@ interface AppState {
   setCardSize: (value: CardWidth) => void;
   toggleGroupSelection: (groupId: number) => void;
   clearGroupSelection: () => void;
+  setGroupProductSort: (
+    groupId: number,
+    sort: ProductSort,
+  ) => Promise<boolean>;
   toggleProductSelection: (productId: number) => void;
   selectProducts: (productIds: number[]) => void;
   clearProductSelection: () => void;
@@ -890,6 +896,20 @@ export const useAppStore = create<AppState>()(
 
     clearGroupSelection() {
       set({ selectedGroupIds: new Set() });
+    },
+
+    async setGroupProductSort(groupId, sort) {
+      const state = get();
+      const group = state.groups.get(groupId);
+      if (!group || (group.productSort ?? "color") === sort) return false;
+
+      const updated = { ...group, productSort: sort };
+      await putGroup(updated);
+      set((current) => ({
+        groups: new Map(current.groups).set(groupId, updated),
+        lastSavedAt: Date.now(),
+      }));
+      return true;
     },
 
     toggleProductSelection(productId) {
@@ -1942,14 +1962,17 @@ export function useVisibleGroups(): Group[] {
 export function useGroupProducts(group: Group | undefined): Product[] {
   const products = useAppStore((s) => s.products);
   const productIds = group?.productIds;
+  const productSort = group?.productSort ?? "color";
 
   return useMemo(() => {
     if (!productIds) return [];
-    return productIds
-      .map((id) => products.get(id))
-      .filter((p): p is Product => p !== undefined)
-      .sort((a, b) => a.order - b.order);
-  }, [products, productIds]);
+    return sortGroupProducts(
+      productIds
+        .map((id) => products.get(id))
+        .filter((p): p is Product => p !== undefined),
+      productSort,
+    );
+  }, [products, productIds, productSort]);
 }
 
 /** Выбранные товары в порядке исходного файла. */
