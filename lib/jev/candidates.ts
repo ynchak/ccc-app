@@ -18,8 +18,18 @@ interface IndexedGroup {
 }
 
 const DEFAULT_MAX_PER_GROUP = 12;
-const DEFAULT_MAX_PAIRS = 1000;
+const MIN_MAX_PAIRS = 1000;
+const MAX_MAX_PAIRS = 8000;
+const PAIRS_PER_GROUP = 4;
 const ALL_PAIRS_LIMIT = 40;
+
+/** Адаптивный лимит пар: растёт вместе с числом групп. */
+export function candidateLimitFor(groupCount: number): number {
+  return Math.min(
+    MAX_MAX_PAIRS,
+    Math.max(MIN_MAX_PAIRS, groupCount * PAIRS_PER_GROUP),
+  );
+}
 
 function normalize(value: string): string {
   return value
@@ -186,8 +196,6 @@ export function generateCandidatePairs(
   options?: { maxPerGroup?: number; maxPairs?: number },
 ): CandidatePair[] {
   const maxPerGroup = options?.maxPerGroup ?? DEFAULT_MAX_PER_GROUP;
-  const maxPairs = options?.maxPairs ?? DEFAULT_MAX_PAIRS;
-
   const indexed: IndexedGroup[] = [];
   for (const group of groups) {
     if (group.manual || group.productIds.length === 0) continue;
@@ -201,6 +209,8 @@ export function generateCandidatePairs(
       brandKey: brandKeyFor(profile),
     });
   }
+
+  const maxPairs = options?.maxPairs ?? candidateLimitFor(indexed.length);
 
   const buckets = new Map<string, IndexedGroup[]>();
   for (const entry of indexed) {

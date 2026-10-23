@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import {
   buildJevGroupProfile,
+  candidateLimitFor,
   generateCandidatePairs,
 } from "@/lib/jev/candidates";
 import { applyJevDecisions } from "@/lib/jev/merge";
@@ -248,4 +249,11 @@ test("Jev: разбор ответа Noul", () => {
   assert.deepEqual(results, [
     { aId: "1", bId: "2", sameType: 0.91, sameModel: 0.96 },
   ]);
+});
+
+test("лимит пар растёт вместе с числом групп", () => {
+  assert.equal(candidateLimitFor(10), 1000);
+  assert.equal(candidateLimitFor(500), 2000);
+  assert.equal(candidateLimitFor(1900), 7600);
+  assert.equal(candidateLimitFor(5000), 8000);
 });

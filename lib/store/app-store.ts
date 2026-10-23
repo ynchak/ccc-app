@@ -37,6 +37,7 @@ import {
 import type { CleanTitleInput, CleanTitleResult } from "@/lib/llm/title-cleanup";
 import { applySuggestedColors } from "@/lib/llm/color-suggestions";
 import { usageCost } from "@/lib/ai-cost";
+import { retryTransient } from "@/lib/retry";
 import {
   JevNotConfiguredError,
   JevRequestError,
@@ -266,6 +267,11 @@ function dropEmptiedGroups(
     if (previous && previous.productIds.length > 0) groups.delete(id);
   }
 }
+
+const CLEANUP_BATCH_SIZE = 10;
+const CLEANUP_CONCURRENCY = 6;
+const JEV_BATCH_SIZE = 20;
+const JEV_CONCURRENCY = 5;
 
 /** Делит массив на батчи. */
 function chunkArray<T>(items: T[], size: number): T[][] {
@@ -1306,27 +1312,19 @@ export const useAppStore = create<AppState>()(
         onProgress?.(processed, total);
         let failed = 0;
 
-        const batches = chunkArray(uncached, 10);
+        const batches = chunkArray(uncached, CLEANUP_BATCH_SIZE);
         let batchIndex = 0;
         const runBatch = async () => {
           while (batchIndex < batches.length) {
             const batch = batches[batchIndex];
             batchIndex++;
             try {
-              let data;
-              try {
-                data = await cleanTitlesBatch(batch);
-              } catch (error) {
-                if (
+              const data = await retryTransient(
+                () => cleanTitlesBatch(batch),
+                (error) =>
                   error instanceof LlmRequestError &&
-                  (error.status === 429 || error.status >= 500)
-                ) {
-                  await new Promise((resolve) => setTimeout(resolve, 1200));
-                  data = await cleanTitlesBatch(batch);
-                } else {
-                  throw error;
-                }
-              }
+                  (error.status === 429 || error.status >= 500),
+              );
               costUsd += usageCost(data.usage);
               for (const result of data.results) {
                 results.set(result.id, result);
@@ -1371,7 +1369,7 @@ export const useAppStore = create<AppState>()(
         };
 
         const workers = Array.from(
-          { length: Math.min(4, batches.length) },
+          { length: Math.min(CLEANUP_CONCURRENCY, batches.length) },
           () => runBatch(),
         );
         const workerResults = await Promise.all(workers);
@@ -1487,7 +1485,7 @@ export const useAppStore = create<AppState>()(
             const jevPairs = buildJevPairs(next, state.products, candidatePairs);
 
             if (jevPairs.length > 0) {
-              const jevBatches = chunkArray(jevPairs, 20);
+              const jevBatches = chunkArray(jevPairs, JEV_BATCH_SIZE);
               const decisions: JevPairResult[] = [];
               let jevBatchIndex = 0;
 
@@ -1496,20 +1494,12 @@ export const useAppStore = create<AppState>()(
                   const batch = jevBatches[jevBatchIndex];
                   jevBatchIndex++;
                   try {
-                    let data;
-                    try {
-                      data = await matchPairsBatch(batch);
-                    } catch (error) {
-                      if (
+                    const data = await retryTransient(
+                      () => matchPairsBatch(batch),
+                      (error) =>
                         error instanceof JevRequestError &&
-                        (error.status === 429 || error.status >= 500)
-                      ) {
-                        await new Promise((resolve) => setTimeout(resolve, 1200));
-                        data = await matchPairsBatch(batch);
-                      } else {
-                        throw error;
-                      }
-                    }
+                        (error.status === 429 || error.status >= 500),
+                    );
                     costUsd += usageCost(data.usage);
                     decisions.push(...data.results);
                   } catch (error) {
@@ -1526,7 +1516,7 @@ export const useAppStore = create<AppState>()(
               };
 
               const jevWorkers = Array.from(
-                { length: Math.min(3, jevBatches.length) },
+                { length: Math.min(JEV_CONCURRENCY, jevBatches.length) },
                 () => runJevBatch(),
               );
               await Promise.all(jevWorkers);
