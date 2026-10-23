@@ -27,6 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ProductImageLightbox } from "@/components/groups/product-image-lightbox";
 import { PRODUCT_DRAG_TYPE, setDragIds } from "@/lib/dnd";
 import { gomerProductUrl, rozetkaProductUrl } from "@/lib/product-links";
 import { useAppStore } from "@/lib/store/app-store";
@@ -50,6 +51,7 @@ export const ProductCard = memo(function ProductCard({
 
   const [imageIndex, setImageIndex] = useState(0);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const images = product.imageUrls;
   const safeIndex = images.length > 0 ? imageIndex % images.length : 0;
@@ -97,7 +99,14 @@ export const ProductCard = memo(function ProductCard({
       }`}
     >
       <div className="relative aspect-square w-full overflow-hidden bg-muted">
-        <div className="absolute inset-0 flex items-center justify-center p-2">
+        <button
+          type="button"
+          className="absolute inset-0 flex cursor-zoom-in items-center justify-center p-2 disabled:cursor-default"
+          onClick={() => setLightboxOpen(true)}
+          disabled={!currentImage || imageFailed}
+          aria-label="Увеличить фото"
+          title="Нажмите, чтобы увеличить"
+        >
           {currentImage && !imageFailed ? (
             <span className="relative block h-full w-full">
               <Image
@@ -117,7 +126,7 @@ export const ProductCard = memo(function ProductCard({
               {images.length === 0 ? "Нет фото" : "Фото не загрузилось"}
             </div>
           )}
-        </div>
+        </button>
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between p-2">
           <div className="pointer-events-auto rounded-md bg-background/90 p-1 shadow-sm backdrop-blur">
@@ -342,6 +351,15 @@ export const ProductCard = memo(function ProductCard({
           ) : null}
         </div>
       </div>
+
+      {lightboxOpen && images.length > 0 ? (
+        <ProductImageLightbox
+          images={images}
+          title={product.goodsTitle}
+          initialIndex={safeIndex}
+          onClose={() => setLightboxOpen(false)}
+        />
+      ) : null}
     </div>
   );
 });
