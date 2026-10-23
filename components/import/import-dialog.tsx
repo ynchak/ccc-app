@@ -81,8 +81,10 @@ function PreviewStat({
   alert?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-0.5 rounded-md border bg-muted/20 px-3 py-2">
-      <span className="text-[11px] text-muted-foreground">{label}</span>
+    <div className="flex min-w-0 flex-col gap-0.5 rounded-md border bg-muted/20 px-3 py-2">
+      <span className="text-[11px] leading-snug break-words text-muted-foreground">
+        {label}
+      </span>
       <span
         className={`text-lg leading-none font-semibold tabular-nums ${
           alert ? "text-destructive" : ""
@@ -289,7 +291,7 @@ export function ImportDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] min-w-0 overflow-x-hidden overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Завантаження CSV</DialogTitle>
           <DialogDescription>
@@ -299,8 +301,8 @@ export function ImportDialog({
         </DialogHeader>
 
         {stage === "preview" && preview ? (
-          <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-2">
+          <div className="flex min-w-0 flex-col gap-3">
+            <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">
               <PreviewStat
                 label="Товарів"
                 value={preview.totalProducts}
@@ -352,7 +354,7 @@ export function ImportDialog({
             ) : null}
 
             {preview.issues.length > 0 ? (
-              <div className="flex flex-col gap-1.5 rounded-lg border p-3">
+              <div className="flex min-w-0 flex-col gap-1.5 rounded-lg border p-3">
                 <span className="text-xs font-medium">Проблемні товари</span>
                 <div className="flex max-h-48 flex-col overflow-y-auto">
                   {preview.issues.map((issue) => (
