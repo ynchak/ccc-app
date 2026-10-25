@@ -451,7 +451,9 @@ function dropEmptiedGroups(
 }
 
 const CLEANUP_BATCH_SIZE = 10;
-const CLEANUP_CONCURRENCY = 6;
+// 8 потоков: на 85 группах ~13.4 с вместо ~18.2 с при 6, на 400 группах
+// без 429. Больше 8 не даёт выигрыша, 20 групп в батче — только +max_tokens.
+const CLEANUP_CONCURRENCY = 8;
 const JEV_BATCH_SIZE = 10;
 const JEV_CONCURRENCY = 3;
 /** Повторный проход по парам, на которые Jev не ответил. */
