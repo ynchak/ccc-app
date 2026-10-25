@@ -29,7 +29,10 @@ import {
   defaultGroupTitle,
   normalizeTitle,
 } from "@/lib/grouping/cluster";
-import { unescapeTitle } from "@/lib/grouping/title-text";
+import {
+  capitalizeTitle,
+  unescapeTitle,
+} from "@/lib/grouping/title-text";
 import { normalizeGroupNumbers } from "@/lib/grouping/numbering";
 import {
   LlmNotConfiguredError,
@@ -297,14 +300,21 @@ function unescapeStoredProductTitles(products: Product[]): {
   return { products: next, changed };
 }
 
-/** То же для названий групп; ключ сравнения пересчитывается. */
-function unescapeStoredGroupTitles(groups: Group[]): {
+/**
+ * То же для названий групп: снимает экранирование и делает первую букву
+ * заглавной. Вручную заданные названия не переписываем.
+ */
+function normalizeStoredGroupTitles(groups: Group[]): {
   groups: Group[];
   changed: Group[];
 } {
   const changed: Group[] = [];
   const next = groups.map((group) => {
-    const title = unescapeTitle(group.title);
+    const unescaped = unescapeTitle(group.title);
+    const title =
+      group.titleSource === "manual"
+        ? unescaped
+        : capitalizeTitle(unescaped);
     const titleRaw = unescapeTitle(group.titleRaw);
     if (title === group.title && titleRaw === group.titleRaw) return group;
     const updated = {
@@ -923,7 +933,7 @@ export const useAppStore = create<AppState>()(
         const { groups: numberedGroups, changed: renumbered } =
           normalizeGroupNumbers(storedGroups);
         const { groups: titledGroups, changed: retitled } =
-          unescapeStoredGroupTitles(numberedGroups);
+          normalizeStoredGroupTitles(numberedGroups);
         const changedGroups = new Map<number, Group>();
         for (const group of renumbered) changedGroups.set(group.id, group);
         for (const group of retitled) changedGroups.set(group.id, group);
@@ -2040,7 +2050,7 @@ export const useAppStore = create<AppState>()(
       const state = get();
       const group = state.groups.get(groupId);
       if (!group) return false;
-      const title = unescapeTitle(group.titleRaw.trim());
+      const title = capitalizeTitle(unescapeTitle(group.titleRaw.trim()));
       if (!title) return false;
 
       const titleKey = normalizeTitle(title);

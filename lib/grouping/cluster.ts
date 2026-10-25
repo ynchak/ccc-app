@@ -1,4 +1,7 @@
-import { unescapeTitle } from "@/lib/grouping/title-text";
+import {
+  capitalizeTitle,
+  unescapeTitle,
+} from "@/lib/grouping/title-text";
 import type { ParsedProduct } from "@/lib/types";
 
 /**
@@ -156,8 +159,10 @@ export function normalizeTitle(title: string): string {
 
 /** Название группы по умолчанию — исходный заголовок первого товара. */
 export function defaultGroupTitle(product: ParsedProduct): string {
-  return unescapeTitle(
-    product.goodsTitle || product.goodsArticle || product.goodsId,
+  return capitalizeTitle(
+    unescapeTitle(
+      product.goodsTitle || product.goodsArticle || product.goodsId,
+    ),
   );
 }
 

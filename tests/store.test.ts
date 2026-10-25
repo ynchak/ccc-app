@@ -443,15 +443,16 @@ test("store: экранированные названия очищаются п
 
   const csv = SYNTHETIC_CSV.replace(
     "Платье тестовое M100",
-    "Платье м\\'ятное M100",
+    "платье м\\'ятное M100",
   );
   await useAppStore.getState().importFile("escaped-title.csv", csv);
 
   const state = useAppStore.getState();
   const group = [...state.groups.values()].find((item) =>
-    item.title.includes("Платье"),
+    item.title.includes("м'ятное"),
   );
   assert.ok(group, "группа должна найтись");
+  assert.ok(group.title.startsWith("Платье"));
   assert.ok(group.title.includes("м'ятное"));
   assert.equal(group.title.includes("\\"), false);
 
@@ -464,9 +465,9 @@ test("store: экранированные названия очищаются п
   const datasetId = state.activeDatasetId;
   assert.ok(datasetId !== null);
   const { putGroups, putProducts } = await import("@/lib/db/idb");
-  await putProducts([{ ...firstProduct, goodsTitle: "Платье м\\'ятное" }]);
+  await putProducts([{ ...firstProduct, goodsTitle: "платье м\\'ятное" }]);
   await putGroups([
-    { ...group, title: "Платье м\\'ятное", titleRaw: "Платье м\\'ятное" },
+    { ...group, title: "платье м\\'ятное", titleRaw: "платье м\\'ятное" },
   ]);
 
   await useAppStore.getState().switchDataset(datasetId);
@@ -474,11 +475,11 @@ test("store: экранированные названия очищаются п
   const reloadedGroup = reloaded.groups.get(group.id);
   assert.ok(reloadedGroup);
   assert.equal(reloadedGroup.title, "Платье м'ятное");
-  assert.equal(reloadedGroup.titleRaw, "Платье м'ятное");
+  assert.equal(reloadedGroup.titleRaw, "платье м'ятное");
   assert.equal(reloadedGroup.titleKey, "платье м'ятное");
   assert.equal(
     reloaded.products.get(group.productIds[0])?.goodsTitle,
-    "Платье м'ятное",
+    "платье м'ятное",
   );
 });
 

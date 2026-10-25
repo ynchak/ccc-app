@@ -137,6 +137,22 @@ test("составной цвет удаляется по метке color", () 
   assert.equal(result.color, "светло-бежевое");
 });
 
+test("после удаления цвета в начале название начинается с большой буквы", () => {
+  const input: CleanTitleInput = {
+    id: "color-first",
+    title: "чорні шорти палаццо Merlini Дженто HDSYR_724",
+    color: "Черный",
+  };
+  const [result] = applyModelResults(
+    [input],
+    [model(input, { 0: "color" })],
+  );
+  assert.equal(
+    result.title,
+    "Шорти палаццо Merlini Дженто HDSYR_724",
+  );
+});
+
 test("низкая уверенность не мешает детерминированному удалению размера", () => {
   const [result] = applyModelResults(
     [base],

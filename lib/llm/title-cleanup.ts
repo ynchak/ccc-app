@@ -5,7 +5,10 @@
  * выполняются кодом.
  */
 
-import { unescapeTitle } from "@/lib/grouping/title-text";
+import {
+  capitalizeTitle,
+  unescapeTitle,
+} from "@/lib/grouping/title-text";
 
 export interface CleanTitleInput {
   id: string;
@@ -179,12 +182,14 @@ export function normalizeTitleAfterLlm(value: string): string {
     if (!remove.has(index)) result += text[index];
   }
 
-  return result
-    .replace(/[([{]\s*[)\]}]/g, "")
-    .replace(/\s+/g, " ")
-    .replace(/\s+([,.;:!?])/g, "$1")
-    .replace(/^[\s,;:]+|[\s,;:]+$/g, "")
-    .trim();
+  return capitalizeTitle(
+    result
+      .replace(/[([{]\s*[)\]}]/g, "")
+      .replace(/\s+/g, " ")
+      .replace(/\s+([,.;:!?])/g, "$1")
+      .replace(/^[\s,;:]+|[\s,;:]+$/g, "")
+      .trim(),
+  );
 }
 
 /** Применяет разметку модели: labels -> очищенное название. */

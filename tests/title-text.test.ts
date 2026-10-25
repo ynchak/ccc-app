@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { unescapeTitle } from "@/lib/grouping/title-text";
+import {
+  capitalizeTitle,
+  unescapeTitle,
+} from "@/lib/grouping/title-text";
 
 test("экранированные кавычки в названии раскрываются", () => {
   assert.equal(
@@ -21,4 +24,16 @@ test("обычный текст не меняется", () => {
     unescapeTitle('Костюм "Гірка" розмір 50'),
     'Костюм "Гірка" розмір 50',
   );
+});
+
+test("первая буква названия становится заглавной", () => {
+  assert.equal(capitalizeTitle("шорти палаццо"), "Шорти палаццо");
+  assert.equal(capitalizeTitle("Шорти палаццо"), "Шорти палаццо");
+  assert.equal(capitalizeTitle("їжачок"), "Їжачок");
+});
+
+test("название с цифры или кавычки не меняется", () => {
+  assert.equal(capitalizeTitle("2XL шорти"), "2XL шорти");
+  assert.equal(capitalizeTitle('"Гірка" костюм'), '"Гірка" костюм');
+  assert.equal(capitalizeTitle(""), "");
 });
