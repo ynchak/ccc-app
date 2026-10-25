@@ -29,6 +29,7 @@ import {
   defaultGroupTitle,
   normalizeTitle,
 } from "@/lib/grouping/cluster";
+import { unescapeTitle } from "@/lib/grouping/title-text";
 import { normalizeGroupNumbers } from "@/lib/grouping/numbering";
 import {
   LlmNotConfiguredError,
@@ -155,6 +156,12 @@ export interface CleanupRunResult {
   jevSkipped: boolean;
   jevFailed: boolean;
   skipped: boolean;
+  /** Сколько пар-кандидатов подготовил код для Jev. */
+  jevCandidates?: number;
+  /** Сколько пар реально ушло в Jev. */
+  jevPairs?: number;
+  /** На сколько пар Jev вернул ответ. */
+  jevAnswered?: number;
 }
 
 /** Запись истории для undo. */
@@ -269,6 +276,47 @@ function buildProductToGroup(groups: Group[]): Map<number, number> {
     for (const productId of group.productIds) index.set(productId, group.id);
   }
   return index;
+}
+
+/**
+ * Убирает экранирование из названий, сохранённых в IndexedDB до появления
+ * очистки. Возвращает обновлённые записи и те, которые нужно перезаписать.
+ */
+function unescapeStoredProductTitles(products: Product[]): {
+  products: Product[];
+  changed: Product[];
+} {
+  const changed: Product[] = [];
+  const next = products.map((product) => {
+    const goodsTitle = unescapeTitle(product.goodsTitle);
+    if (goodsTitle === product.goodsTitle) return product;
+    const updated = { ...product, goodsTitle };
+    changed.push(updated);
+    return updated;
+  });
+  return { products: next, changed };
+}
+
+/** То же для названий групп; ключ сравнения пересчитывается. */
+function unescapeStoredGroupTitles(groups: Group[]): {
+  groups: Group[];
+  changed: Group[];
+} {
+  const changed: Group[] = [];
+  const next = groups.map((group) => {
+    const title = unescapeTitle(group.title);
+    const titleRaw = unescapeTitle(group.titleRaw);
+    if (title === group.title && titleRaw === group.titleRaw) return group;
+    const updated = {
+      ...group,
+      title,
+      titleRaw,
+      titleKey: title === group.title ? group.titleKey : normalizeTitle(title),
+    };
+    changed.push(updated);
+    return updated;
+  });
+  return { groups: next, changed };
 }
 
 /** Параметры фильтрации списка групп. */
@@ -404,8 +452,11 @@ function dropEmptiedGroups(
 
 const CLEANUP_BATCH_SIZE = 10;
 const CLEANUP_CONCURRENCY = 6;
-const JEV_BATCH_SIZE = 20;
-const JEV_CONCURRENCY = 5;
+const JEV_BATCH_SIZE = 10;
+const JEV_CONCURRENCY = 3;
+/** Повторный проход по парам, на которые Jev не ответил. */
+const JEV_RETRY_BATCH_SIZE = 5;
+const JEV_RETRY_CONCURRENCY = 2;
 
 /** Делит массив на батчи. */
 function chunkArray<T>(items: T[], size: number): T[][] {
@@ -572,6 +623,10 @@ export const useAppStore = create<AppState>()(
         },
       ].slice(-UNDO_LIMIT),
       lastSavedAt: Date.now(),
+      // Убираем из выбора группы, которых больше нет после операции.
+      selectedGroupIds: new Set(
+        [...state.selectedGroupIds].filter((id) => after.has(id)),
+      ),
       selectedProductIds: new Set(),
     });
 
@@ -850,18 +905,34 @@ export const useAppStore = create<AppState>()(
     async switchDataset(datasetId) {
       set({ isLoading: true });
       try {
-        const [products, groups] = await Promise.all([
+        const [storedProducts, storedGroups] = await Promise.all([
           loadProducts(datasetId),
           loadGroups(datasetId),
         ]);
-        const { groups: numberedGroups, changed } =
-          normalizeGroupNumbers(groups);
-        if (changed.length > 0) await putGroups(changed);
 
-        const groupsMap = new Map(numberedGroups.map((g) => [g.id, g]));
+        // Файлы, импортированные до появления очистки, могли сохранить
+        // экранированные названия — чиним их при загрузке.
+        const productsWithTitles = unescapeStoredProductTitles(storedProducts);
+        if (productsWithTitles.changed.length > 0) {
+          await putProducts(productsWithTitles.changed);
+        }
+        const products = productsWithTitles.products;
+
+        const { groups: numberedGroups, changed: renumbered } =
+          normalizeGroupNumbers(storedGroups);
+        const { groups: titledGroups, changed: retitled } =
+          unescapeStoredGroupTitles(numberedGroups);
+        const changedGroups = new Map<number, Group>();
+        for (const group of renumbered) changedGroups.set(group.id, group);
+        for (const group of retitled) changedGroups.set(group.id, group);
+        if (changedGroups.size > 0) {
+          await putGroups([...changedGroups.values()]);
+        }
+
+        const groupsMap = new Map(titledGroups.map((g) => [g.id, g]));
         const saved = getFiltersForDataset(datasetId);
         const availableCategories = new Set(
-          numberedGroups.map((group) => group.categoryId),
+          titledGroups.map((group) => group.categoryId),
         );
         const filters: DatasetFilters = {
           ...saved,
@@ -900,7 +971,7 @@ export const useAppStore = create<AppState>()(
           products: productsMap,
           groups: groupsMap,
           orderedGroupIds,
-          productToGroup: buildProductToGroup(numberedGroups),
+          productToGroup: buildProductToGroup(titledGroups),
           search: "",
           categoryFilter: filters.categoryFilter,
           quickFilter: filters.quickFilter,
@@ -1190,15 +1261,15 @@ export const useAppStore = create<AppState>()(
       next.set(targetId, { ...target, manual: true, productIds });
       for (const source of sources) next.delete(source.id);
 
-      const selectedGroupIds = new Set(state.selectedGroupIds);
-      for (const source of sources) selectedGroupIds.delete(source.id);
-      set({ selectedGroupIds });
-
       await commit(
         state.groups,
         next,
         sources.length === 1 ? "Групи об’єднано" : "Кілька груп об’єднано",
       );
+
+      // Действие завершено — снимаем выбор полностью, иначе остаётся одна
+      // целевая группа и предложение объединить её саму с собой.
+      set({ selectedGroupIds: new Set() });
       return true;
     },
 
@@ -1724,6 +1795,9 @@ export const useAppStore = create<AppState>()(
         let suggestions: MergeSuggestion[] = [];
         let jevSkipped = false;
         let jevFailed = false;
+        let jevCandidateCount = 0;
+        let jevPairCount = 0;
+        let jevAnswered = 0;
 
         try {
           const jevStatus = await fetchJevStatus();
@@ -1734,51 +1808,85 @@ export const useAppStore = create<AppState>()(
               next.values(),
               state.products,
             );
+            jevCandidateCount = candidatePairs.length;
             const jevPairs = buildJevPairs(next, state.products, candidatePairs);
+            jevPairCount = jevPairs.length;
 
             if (jevPairs.length > 0) {
               options?.onModelProgress?.(0, jevPairs.length);
-              let jevProcessed = 0;
-              const jevBatches = chunkArray(jevPairs, JEV_BATCH_SIZE);
               const decisions: JevPairResult[] = [];
-              let jevBatchIndex = 0;
+              const answeredKeys = new Set<string>();
 
-              const runJevBatch = async () => {
-                while (jevBatchIndex < jevBatches.length) {
-                  const batch = jevBatches[jevBatchIndex];
-                  jevBatchIndex++;
-                  try {
-                    const data = await retryTransient(
-                      () => matchPairsBatch(batch),
-                      (error) =>
-                        error instanceof JevRequestError &&
-                        (error.status === 429 || error.status >= 500),
-                    );
-                    costUsd += usageCost(data.usage);
-                    decisions.push(...data.results);
-                    jevProcessed += batch.length;
-                    options?.onModelProgress?.(
-                      Math.min(jevProcessed, jevPairs.length),
-                      jevPairs.length,
-                    );
-                  } catch (error) {
-                    if (error instanceof JevNotConfiguredError) {
-                      jevSkipped = true;
-                      return;
-                    }
-                    if (error instanceof JevRequestError && error.status === 401) {
-                      throw error;
-                    }
-                    jevFailed = true;
-                  }
-                }
+              const pairKey = (aId: string | number, bId: string | number) => {
+                const a = Number(aId);
+                const b = Number(bId);
+                return a < b ? `${a}:${b}` : `${b}:${a}`;
               };
 
-              const jevWorkers = Array.from(
-                { length: Math.min(JEV_CONCURRENCY, jevBatches.length) },
-                () => runJevBatch(),
-              );
-              await Promise.all(jevWorkers);
+              const rememberAnswers = (results: JevPairResult[]) => {
+                for (const result of results) {
+                  const key = pairKey(result.aId, result.bId);
+                  if (answeredKeys.has(key)) continue;
+                  answeredKeys.add(key);
+                  decisions.push(result);
+                }
+                jevAnswered = answeredKeys.size;
+              };
+
+              /**
+               * Отправляет пары батчами. Ошибки отдельных батчей не
+               * фатальны: пары, на которые не пришёл ответ, попадут в
+               * повторный проход.
+               */
+              const runBatches = async (
+                pairs: JevPair[],
+                batchSize: number,
+                concurrency: number,
+              ) => {
+                const batches = chunkArray(pairs, batchSize);
+                let batchIndex = 0;
+
+                const runBatch = async () => {
+                  while (batchIndex < batches.length) {
+                    const batch = batches[batchIndex];
+                    batchIndex++;
+                    try {
+                      const data = await retryTransient(
+                        () => matchPairsBatch(batch),
+                        (error) =>
+                          error instanceof JevRequestError &&
+                          (error.status === 429 || error.status >= 500),
+                      );
+                      costUsd += usageCost(data.usage);
+                      rememberAnswers(data.results);
+                      options?.onModelProgress?.(
+                        Math.min(jevAnswered, jevPairs.length),
+                        jevPairs.length,
+                      );
+                    } catch (error) {
+                      if (error instanceof JevNotConfiguredError) {
+                        jevSkipped = true;
+                        return;
+                      }
+                      if (
+                        error instanceof JevRequestError &&
+                        error.status === 401
+                      ) {
+                        throw error;
+                      }
+                    }
+                  }
+                };
+
+                await Promise.all(
+                  Array.from(
+                    { length: Math.min(concurrency, batches.length) },
+                    () => runBatch(),
+                  ),
+                );
+              };
+
+              await runBatches(jevPairs, JEV_BATCH_SIZE, JEV_CONCURRENCY);
 
               if (get().activeDatasetId !== datasetId) {
                 return {
@@ -1794,8 +1902,60 @@ export const useAppStore = create<AppState>()(
                   jevSkipped,
                   jevFailed,
                   skipped: false,
+                  jevCandidates: jevCandidateCount,
+                  jevPairs: jevPairCount,
+                  jevAnswered,
                 };
               }
+
+              const missingPairs = jevPairs.filter(
+                (pair) => !answeredKeys.has(pairKey(pair.a.id, pair.b.id)),
+              );
+              if (missingPairs.length > 0 && !jevSkipped) {
+                await runBatches(
+                  missingPairs,
+                  JEV_RETRY_BATCH_SIZE,
+                  JEV_RETRY_CONCURRENCY,
+                );
+
+                if (get().activeDatasetId !== datasetId) {
+                  return {
+                    total,
+                    cleaned: 0,
+                    merged: 0,
+                    modelMerged: 0,
+                    codeMerged: 0,
+                    colorsSuggested: 0,
+                    costUsd: 0,
+                    suggestions: [],
+                    failed: total,
+                    jevSkipped,
+                    jevFailed,
+                    skipped: false,
+                    jevCandidates: jevCandidateCount,
+                    jevPairs: jevPairCount,
+                    jevAnswered,
+                  };
+                }
+              }
+
+              const stillMissing = jevPairs.filter(
+                (pair) => !answeredKeys.has(pairKey(pair.a.id, pair.b.id)),
+              );
+              if (!jevSkipped && stillMissing.length > 0) {
+                jevFailed = true;
+                console.warn(
+                  `[jev] ${stillMissing.length} з ${jevPairs.length} пар без відповіді:`,
+                  stillMissing
+                    .slice(0, 10)
+                    .map((pair) => `${pair.a.title} ↔ ${pair.b.title}`),
+                );
+              }
+
+              options?.onModelProgress?.(
+                Math.min(jevAnswered, jevPairs.length),
+                jevPairs.length,
+              );
 
               if (decisions.length > 0) {
                 const applied = applyJevDecisions(
@@ -1830,6 +1990,11 @@ export const useAppStore = create<AppState>()(
                 ? "Назви очищено, групи об’єднано за артикулом"
                 : "Назви очищено ШІ",
           );
+          // После автоматической обработки названия изменились, а порядок
+          // групп остался от исходных — показываем список так же, как это
+          // делает кнопка «Пересортувати». Ручные переименования по-прежнему
+          // не двигают группы.
+          get().resort();
         }
         if (costUsd > 0 && datasetId !== null) {
           await updateDatasetAiCost(datasetId, costUsd);
@@ -1860,6 +2025,9 @@ export const useAppStore = create<AppState>()(
           jevSkipped,
           jevFailed,
           skipped: false,
+          jevCandidates: jevCandidateCount,
+          jevPairs: jevPairCount,
+          jevAnswered,
         };
       } finally {
         set({ isLoading: false });
@@ -1870,7 +2038,7 @@ export const useAppStore = create<AppState>()(
       const state = get();
       const group = state.groups.get(groupId);
       if (!group) return false;
-      const title = group.titleRaw.trim();
+      const title = unescapeTitle(group.titleRaw.trim());
       if (!title) return false;
 
       const titleKey = normalizeTitle(title);

@@ -175,6 +175,8 @@ export function AppShell() {
 
   const mainRef = useRef<HTMLElement>(null);
   const searchOriginRef = useRef<SearchOrigin | null>(null);
+  /** После закрытия окна импорта нужно открыть рекомендации по объединению. */
+  const pendingSuggestionsRef = useRef(false);
 
   useEffect(() => {
     void init();
@@ -472,6 +474,13 @@ export function AppShell() {
       } else if (result.skipped) {
         notify("LLM не налаштована — назви не змінено", "error");
       } else {
+        const jevPairs = result.jevPairs;
+        const jevAnswered = result.jevAnswered;
+        const jevIncomplete =
+          !result.jevSkipped &&
+          jevPairs !== undefined &&
+          jevAnswered !== undefined &&
+          jevAnswered < jevPairs;
         const parts = [
           result.cleaned > 0 ? `очищено назв: ${result.cleaned}` : null,
           result.merged > 0 ? `об’єднано за назвою: ${result.merged}` : null,
@@ -490,13 +499,17 @@ export function AppShell() {
           result.suggestions.length > 0
             ? `пропозицій: ${result.suggestions.length}`
             : null,
+          jevIncomplete
+            ? `Jev перевірив ${jevAnswered} з ${jevPairs} пар`
+            : null,
           result.failed > 0 ? `не оброблено: ${result.failed}` : null,
         ].filter(Boolean);
         const message =
           parts.length > 0 ? parts.join(", ") : "Змін немає";
         const lastRunNote =
           cleanupRunsLeft === 1 ? " Це був останній запуск." : "";
-        const hasProblem = result.failed > 0 || result.jevFailed;
+        const hasProblem =
+          result.failed > 0 || result.jevFailed || jevIncomplete;
         notify(
           result.jevFailed
             ? `${message}. Jev не зміг перевірити моделі.${lastRunNote}`
@@ -661,11 +674,13 @@ export function AppShell() {
             <div className="border-t px-4 py-2">
               <div className="mx-auto w-full max-w-[1440px]">
                 <GroupFilterBar
-                  onMergeSelected={() =>
-                    setMergeGroupIds([
+                  onMergeSelected={() => {
+                    const ids = [
                       ...useAppStore.getState().selectedGroupIds,
-                    ])
-                  }
+                    ];
+                    if (ids.length < 2) return;
+                    setMergeGroupIds(ids);
+                  }}
                 />
               </div>
             </div>
@@ -781,7 +796,18 @@ export function AppShell() {
         </main>
       </div>
 
-      <ImportDialog open={importOpen} onOpenChange={setImportOpen} />
+      <ImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onShowSuggestions={() => {
+          pendingSuggestionsRef.current = true;
+        }}
+        onCloseComplete={() => {
+          if (!pendingSuggestionsRef.current) return;
+          pendingSuggestionsRef.current = false;
+          setSuggestionsOpen(true);
+        }}
+      />
 
       <MergeSuggestionsDialog
         open={suggestionsOpen}

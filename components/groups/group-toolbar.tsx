@@ -390,10 +390,16 @@ export function GroupFilterBar({
           <span className="font-medium">
             Вибрано: {groupsLabel(selectedGroupIds.size)}
           </span>
-          <Button size="sm" onClick={onMergeSelected}>
-            <HugeiconsIcon icon={GroupLayersIcon} data-icon="inline-start" />
-            Об’єднати
-          </Button>
+          {selectedGroupIds.size >= 2 ? (
+            <Button size="sm" onClick={onMergeSelected}>
+              <HugeiconsIcon icon={GroupLayersIcon} data-icon="inline-start" />
+              Об’єднати
+            </Button>
+          ) : (
+            <span className="text-xs text-muted-foreground">
+              Виберіть ще одну групу для об’єднання
+            </span>
+          )}
           <Button size="sm" variant="ghost" onClick={clearGroupSelection}>
             <HugeiconsIcon icon={Cancel01Icon} data-icon="inline-start" />
             Зняти вибір

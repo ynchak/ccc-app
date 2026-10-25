@@ -113,9 +113,15 @@ function issueLabel(reason: "no-photo" | "invalid-url" | "singleton"): string {
 export function ImportDialog({
   open,
   onOpenChange,
+  onShowSuggestions,
+  onCloseComplete,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Импорт завершён и Jev нашёл рекомендации по объединению. */
+  onShowSuggestions?: () => void;
+  /** Окно импорта полностью закрылось (анимация завершена). */
+  onCloseComplete?: () => void;
 }) {
   const importFile = useAppStore((s) => s.importFile);
   const cleanTitlesWithLlm = useAppStore((s) => s.cleanTitlesWithLlm);
@@ -221,6 +227,13 @@ export function ImportDialog({
           "error",
         );
       } else {
+        const jevPairs = result.jevPairs;
+        const jevAnswered = result.jevAnswered;
+        const jevIncomplete =
+          !result.jevSkipped &&
+          jevPairs !== undefined &&
+          jevAnswered !== undefined &&
+          jevAnswered < jevPairs;
         const parts = [
           result.cleaned > 0 ? `очищено назв: ${result.cleaned}` : null,
           result.merged > 0 ? `об’єднано за назвою: ${result.merged}` : null,
@@ -239,13 +252,17 @@ export function ImportDialog({
           result.suggestions.length > 0
             ? `пропозицій: ${result.suggestions.length}`
             : null,
+          jevIncomplete
+            ? `Jev перевірив ${jevAnswered} з ${jevPairs} пар`
+            : null,
           result.failed > 0 ? `не оброблено: ${result.failed}` : null,
         ].filter(Boolean);
         const message =
           parts.length > 0
             ? `Файл завантажено: ${parts.join(", ")}.`
             : "Файл завантажено.";
-        const hasProblem = result.failed > 0 || result.jevFailed;
+        const hasProblem =
+          result.failed > 0 || result.jevFailed || jevIncomplete;
         notify(
           result.jevFailed
             ? `${message} Jev не зміг перевірити моделі.`
@@ -254,8 +271,12 @@ export function ImportDialog({
         );
       }
 
+      const hasSuggestions =
+        !result.skipped && result.suggestions.length > 0;
+
       reset();
       onOpenChange(false);
+      if (hasSuggestions) onShowSuggestions?.();
     } catch (caught) {
       const message =
         caught instanceof Error && caught.message
@@ -292,6 +313,9 @@ export function ImportDialog({
         if (!next && isWorking) return;
         if (!next) reset();
         onOpenChange(next);
+      }}
+      onOpenChangeComplete={(next) => {
+        if (!next) onCloseComplete?.();
       }}
     >
       <DialogContent className="max-h-[calc(100dvh-2rem)] min-w-0 overflow-x-hidden overflow-y-auto sm:max-w-2xl">

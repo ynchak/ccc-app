@@ -1,6 +1,7 @@
 import Papa from "papaparse";
 
 import { buildColumnMapping, readValue, parseImageUrls } from "@/lib/csv/columns";
+import { unescapeTitle } from "@/lib/grouping/title-text";
 import type { ColumnField, ColumnMapping, ParsedProduct } from "@/lib/types";
 
 /** Результат разбора файла. */
@@ -60,8 +61,9 @@ export function parseCsv(text: string): ParseResult {
     }
 
     const goodsArticle = value("goodsArticle") ?? "";
-    const goodsTitle =
-      value("goodsTitle") ?? (goodsArticle || goodsId);
+    const goodsTitle = unescapeTitle(
+      value("goodsTitle") ?? (goodsArticle || goodsId),
+    );
 
     products.push({
       order: products.length,

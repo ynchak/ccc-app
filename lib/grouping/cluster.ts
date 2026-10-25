@@ -1,3 +1,4 @@
+import { unescapeTitle } from "@/lib/grouping/title-text";
 import type { ParsedProduct } from "@/lib/types";
 
 /**
@@ -155,7 +156,9 @@ export function normalizeTitle(title: string): string {
 
 /** Название группы по умолчанию — исходный заголовок первого товара. */
 export function defaultGroupTitle(product: ParsedProduct): string {
-  return product.goodsTitle || product.goodsArticle || product.goodsId;
+  return unescapeTitle(
+    product.goodsTitle || product.goodsArticle || product.goodsId,
+  );
 }
 
 /**
@@ -172,7 +175,7 @@ export function toGroups(
     return {
       memberIndexes: cluster.memberIndexes,
       title,
-      titleRaw: first.goodsTitle,
+      titleRaw: unescapeTitle(first.goodsTitle),
       titleKey: normalizeTitle(title),
       categoryId: first.categoryId,
       categoryTitle: first.categoryTitle,

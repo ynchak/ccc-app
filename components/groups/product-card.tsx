@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ProductImageLightbox } from "@/components/groups/product-image-lightbox";
 import { PRODUCT_DRAG_TYPE, setDragIds } from "@/lib/dnd";
+import { cardImageUrl } from "@/lib/product-images";
 import { gomerProductUrl, rozetkaProductUrl } from "@/lib/product-links";
 import { useAppStore } from "@/lib/store/app-store";
 import type { Product } from "@/lib/types";
@@ -51,12 +52,22 @@ export const ProductCard = memo(function ProductCard({
 
   const [imageIndex, setImageIndex] = useState(0);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [variantFailedImages, setVariantFailedImages] = useState<Set<string>>(
+    new Set(),
+  );
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const images = product.imageUrls;
   const safeIndex = images.length > 0 ? imageIndex % images.length : 0;
   const currentImage = images[safeIndex];
   const imageFailed = currentImage ? failedImages.has(currentImage) : false;
+  // Для карточки берём уменьшенный вариант с CDN; оригинал остаётся
+  // в лайтбоксе и в деталях товара.
+  const cardSrc = currentImage
+    ? variantFailedImages.has(currentImage)
+      ? currentImage
+      : cardImageUrl(currentImage)
+    : "";
   const gomerUrl = gomerProductUrl(product);
   const rozetkaUrl = rozetkaProductUrl(product.goodsId);
 
@@ -83,6 +94,17 @@ export const ProductCard = memo(function ProductCard({
 
   const handleImageError = () => {
     if (!currentImage) return;
+
+    // Уменьшенного варианта могло не оказаться — один раз пробуем оригинал.
+    if (cardSrc !== currentImage) {
+      setVariantFailedImages((current) => {
+        const next = new Set(current);
+        next.add(currentImage);
+        return next;
+      });
+      return;
+    }
+
     setFailedImages((current) => {
       const next = new Set(current);
       next.add(currentImage);
@@ -110,7 +132,7 @@ export const ProductCard = memo(function ProductCard({
           {currentImage && !imageFailed ? (
             <span className="relative block h-full w-full">
               <Image
-                src={currentImage}
+                src={cardSrc}
                 alt={product.goodsTitle}
                 fill
                 sizes="(max-width: 640px) 100vw, 320px"

@@ -331,6 +331,330 @@ test("store: импорт, переименование, перенос, уда�
   assert.equal(useAppStore.getState().datasets.length, datasetsBefore);
 });
 
+test("store: после автоочистки названий список сортируется", async () => {
+  const { useAppStore } = await import("@/lib/store/app-store");
+
+  await useAppStore
+    .getState()
+    .importFile("sort-after-cleanup.csv", SYNTHETIC_CSV);
+  let state = useAppStore.getState();
+  assert.equal(state.sortBy, "category");
+
+  const ordered = state.orderedGroupIds
+    .map((id) => state.groups.get(id))
+    .filter((group): group is Group => group !== undefined);
+  const clothing = ordered.filter((group) => group.categoryId === "100");
+  assert.ok(clothing.length >= 2, "нужна категория с двумя группами");
+  const first = clothing[0];
+  const last = clothing[clothing.length - 1];
+
+  // Очистка поменяет названия так, что группы должны поменяться местами.
+  const newTitles = new Map<number, string>([
+    [first.id, "ЯЯЯ Платье тестовое"],
+    [last.id, "ААА Платье тестовое"],
+  ]);
+
+  // Автосортировка должна вернуть на первую страницу.
+  useAppStore.getState().setPage(2);
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+    const method = (init?.method ?? "GET").toUpperCase();
+
+    if (url === "/api/group-matches") {
+      return new Response(null, { status: 503 });
+    }
+    if (url !== "/api/clean-titles") {
+      throw new Error(`неожиданный запрос: ${method} ${url}`);
+    }
+    if (method === "GET") {
+      return Response.json({
+        configured: true,
+        model: "test-model",
+        promptVersion: "test-version",
+      });
+    }
+
+    const body = JSON.parse(String(init?.body ?? "{}")) as {
+      items: Array<{ id: string; title: string }>;
+    };
+    return Response.json({
+      results: body.items.map((item) => ({
+        id: item.id,
+        title: newTitles.get(Number(item.id)) ?? item.title,
+        originalTitle: item.title,
+        removed: [],
+        confidence: 1,
+      })),
+      model: "test-model",
+      promptVersion: "test-version",
+      usage: { cost: 0 },
+    });
+  }) as typeof fetch;
+
+  try {
+    const result = await useAppStore.getState().cleanTitlesWithLlm();
+    assert.equal(result.skipped, false);
+    assert.ok(result.cleaned >= 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  state = useAppStore.getState();
+  assert.equal(state.page, 1);
+
+  // Весь список идёт по текущему правилу сортировки: категория, затем название.
+  const sorted = state.orderedGroupIds
+    .map((id) => state.groups.get(id))
+    .filter((group): group is Group => group !== undefined);
+  for (let index = 1; index < sorted.length; index++) {
+    const previous = sorted[index - 1];
+    const current = sorted[index];
+    const categoryOrder = previous.categoryTitle.localeCompare(
+      current.categoryTitle,
+      "uk",
+    );
+    assert.ok(
+      categoryOrder < 0 ||
+        (categoryOrder === 0 &&
+          previous.title.localeCompare(current.title, "uk") <= 0),
+      `нарушен порядок: ${previous.title} → ${current.title}`,
+    );
+  }
+
+  // Группа с названием «ААА…» теперь стоит раньше «ЯЯЯ…».
+  const firstIndex = state.orderedGroupIds.indexOf(first.id);
+  const lastIndex = state.orderedGroupIds.indexOf(last.id);
+  assert.ok(firstIndex >= 0 && lastIndex >= 0);
+  assert.ok(lastIndex < firstIndex);
+});
+
+test("store: экранированные названия очищаются при импорте", async () => {
+  const { useAppStore } = await import("@/lib/store/app-store");
+
+  const csv = SYNTHETIC_CSV.replace(
+    "Платье тестовое M100",
+    "Платье м\\'ятное M100",
+  );
+  await useAppStore.getState().importFile("escaped-title.csv", csv);
+
+  const state = useAppStore.getState();
+  const group = [...state.groups.values()].find((item) =>
+    item.title.includes("Платье"),
+  );
+  assert.ok(group, "группа должна найтись");
+  assert.ok(group.title.includes("м'ятное"));
+  assert.equal(group.title.includes("\\"), false);
+
+  const firstProduct = state.products.get(group.productIds[0]);
+  assert.ok(firstProduct, "товар должен найтись");
+  assert.ok(firstProduct.goodsTitle.includes("м'ятное"));
+  assert.equal(firstProduct.goodsTitle.includes("\\"), false);
+
+  // Файлы, сохранённые до очистки, исправляются при загрузке.
+  const datasetId = state.activeDatasetId;
+  assert.ok(datasetId !== null);
+  const { putGroups, putProducts } = await import("@/lib/db/idb");
+  await putProducts([{ ...firstProduct, goodsTitle: "Платье м\\'ятное" }]);
+  await putGroups([
+    { ...group, title: "Платье м\\'ятное", titleRaw: "Платье м\\'ятное" },
+  ]);
+
+  await useAppStore.getState().switchDataset(datasetId);
+  const reloaded = useAppStore.getState();
+  const reloadedGroup = reloaded.groups.get(group.id);
+  assert.ok(reloadedGroup);
+  assert.equal(reloadedGroup.title, "Платье м'ятное");
+  assert.equal(reloadedGroup.titleRaw, "Платье м'ятное");
+  assert.equal(reloadedGroup.titleKey, "платье м'ятное");
+  assert.equal(
+    reloaded.products.get(group.productIds[0])?.goodsTitle,
+    "Платье м'ятное",
+  );
+});
+
+test("store: после объединения групп выбор сбрасывается", async () => {
+  const { useAppStore } = await import("@/lib/store/app-store");
+  await useAppStore
+    .getState()
+    .importFile("merge-selection.csv", SYNTHETIC_CSV);
+
+  const state = useAppStore.getState();
+  const byCategory = new Map<string, Group[]>();
+  for (const id of state.orderedGroupIds) {
+    const group = state.groups.get(id);
+    if (!group) continue;
+    const list = byCategory.get(group.categoryId) ?? [];
+    list.push(group);
+    byCategory.set(group.categoryId, list);
+  }
+
+  const triple = [...byCategory.values()].find((list) => list.length >= 3);
+  assert.ok(triple, "нужна категория с тремя группами");
+
+  const ids = triple.slice(0, 3).map((group) => group.id);
+  for (const id of ids) useAppStore.getState().toggleGroupSelection(id);
+  assert.equal(useAppStore.getState().selectedGroupIds.size, 3);
+
+  const groupsBefore = useAppStore.getState().groups.size;
+  const ok = await useAppStore.getState().mergeGroups(ids, ids[0]);
+  assert.equal(ok, true);
+  assert.equal(useAppStore.getState().groups.size, groupsBefore - 2);
+  assert.equal(useAppStore.getState().selectedGroupIds.size, 0);
+});
+
+/** Мок ответов Jev: отвечает на пары из батча или только на часть. */
+function mockJevFetch(options: {
+  answer: (
+    pairs: Array<{ a: { id: string }; b: { id: string } }>,
+    call: number,
+  ) => Array<{ aId: string; bId: string; sameType: number; sameModel: number }>;
+}) {
+  let call = 0;
+  const requestSizes: number[] = [];
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = (async (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+    const method = (init?.method ?? "GET").toUpperCase();
+
+    if (url === "/api/clean-titles") {
+      if (method === "GET") {
+        return Response.json({
+          configured: true,
+          model: "test-model",
+          promptVersion: "test-version",
+        });
+      }
+      const body = JSON.parse(String(init?.body ?? "{}")) as {
+        items: Array<{ id: string; title: string }>;
+      };
+      return Response.json({
+        results: body.items.map((item) => ({
+          id: item.id,
+          title: item.title,
+          originalTitle: item.title,
+          removed: [],
+          confidence: 1,
+        })),
+        model: "test-model",
+        promptVersion: "test-version",
+        usage: { cost: 0 },
+      });
+    }
+
+    if (url === "/api/group-matches") {
+      if (method === "GET") {
+        return Response.json({
+          configured: true,
+          model: "jev-test",
+          promptVersion: "test-version",
+        });
+      }
+      const body = JSON.parse(String(init?.body ?? "{}")) as {
+        pairs: Array<{ a: { id: string }; b: { id: string } }>;
+      };
+      call++;
+      requestSizes.push(body.pairs.length);
+      return Response.json({
+        results: options.answer(body.pairs, call),
+        model: "jev-test",
+        promptVersion: "test-version",
+        usage: {},
+      });
+    }
+
+    throw new Error(`неожиданный запрос: ${method} ${url}`);
+  }) as typeof fetch;
+
+  return {
+    requestSizes,
+    calls: () => call,
+    restore: () => {
+      globalThis.fetch = originalFetch;
+    },
+  };
+}
+
+test("store: Jev повторяет пары, на которые не пришёл ответ", async () => {
+  const { useAppStore } = await import("@/lib/store/app-store");
+  const csv = SYNTHETIC_CSV.replaceAll("тестовое", "Jev-retry");
+  await useAppStore.getState().importFile("jev-retry.csv", csv);
+
+  let firstRequest = true;
+  const mock = mockJevFetch({
+    answer: (pairs) => {
+      // На первом запросе намеренно теряем последнюю пару.
+      const answered = firstRequest ? pairs.slice(0, -1) : pairs;
+      firstRequest = false;
+      return answered.map((pair) => ({
+        aId: pair.a.id,
+        bId: pair.b.id,
+        sameType: 0.9,
+        sameModel: 0.9,
+      }));
+    },
+  });
+
+  try {
+    const result = await useAppStore.getState().cleanTitlesWithLlm();
+    assert.equal(result.jevFailed, false);
+    assert.ok((result.jevPairs ?? 0) > 0);
+    assert.equal(result.jevAnswered, result.jevPairs);
+    assert.ok((result.jevCandidates ?? 0) >= (result.jevPairs ?? 0));
+    assert.ok(mock.calls() >= 2);
+    assert.ok(mock.requestSizes.includes(1), "должен был быть ретрай пары");
+  } finally {
+    mock.restore();
+  }
+});
+
+test("store: неотвеченные пары Jev видны в результате", async () => {
+  const { useAppStore } = await import("@/lib/store/app-store");
+  const csv = SYNTHETIC_CSV.replaceAll("тестовое", "Jev-missing");
+  await useAppStore.getState().importFile("jev-missing.csv", csv);
+
+  const mock = mockJevFetch({
+    // Отвечаем только на первую пару в каждом запросе.
+    answer: (pairs) =>
+      pairs.slice(0, 1).map((pair) => ({
+        aId: pair.a.id,
+        bId: pair.b.id,
+        sameType: 0.9,
+        sameModel: 0.9,
+      })),
+  });
+  const originalWarn = console.warn;
+  console.warn = () => {};
+
+  try {
+    const result = await useAppStore.getState().cleanTitlesWithLlm();
+    assert.equal(result.jevFailed, true);
+    assert.ok((result.jevPairs ?? 0) > 0);
+    assert.ok((result.jevAnswered ?? 0) < (result.jevPairs ?? 0));
+  } finally {
+    console.warn = originalWarn;
+    mock.restore();
+  }
+});
+
 test("findGroupIndexByNumber: точное совпадение и ближайший номер", async () => {
   const { findGroupIndexByNumber } = await import("@/lib/store/app-store");
   const groups = [1, 5, 9].map((number) => ({ number })) as unknown as Group[];

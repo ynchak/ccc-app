@@ -248,10 +248,51 @@ test("нормалізація не чіпає слово «розмірний»
   );
 });
 
+test("нормалізація прибирає підписи кольору перед LLM", () => {
+  assert.equal(
+    normalizeTitleBeforeLlm("Пуховик зимовий, колір ізумруд"),
+    "Пуховик зимовий, ізумруд",
+  );
+  assert.equal(
+    normalizeTitleBeforeLlm("Костюм цвет: черный"),
+    "Костюм черный",
+  );
+  assert.equal(
+    normalizeTitleBeforeLlm("Костюм ЦВЕТОМ белый"),
+    "Костюм белый",
+  );
+  assert.equal(
+    normalizeTitleBeforeLlm("Сукня кольору хакі"),
+    "Сукня хакі",
+  );
+});
+
+test("нормалізація не чіпає похідні від слова «колір»", () => {
+  assert.equal(
+    normalizeTitleBeforeLlm("Кольорова гама колір синій"),
+    "Кольорова гама синій",
+  );
+  assert.equal(
+    normalizeTitleBeforeLlm("Цветной принт цвет красный"),
+    "Цветной принт красный",
+  );
+});
+
 test("назви, що відрізняються лише словом розмір, стають однаковими", () => {
   const a = normalizeTitleBeforeLlm("Боді шоколад розмір M HDSYR_839");
   const b = normalizeTitleBeforeLlm("Боді шоколад S HDSYR_839");
   assert.equal(a.replace(" M ", " "), b.replace(" S ", " "));
+});
+
+test("екранування прибирається до і після LLM", () => {
+  assert.equal(
+    normalizeTitleBeforeLlm("Шорты Fitted 5\\'\\' 42 (XL)"),
+    "Шорты Fitted 5'' 42 (XL)",
+  );
+  assert.equal(
+    normalizeTitleAfterLlm("Шорты Fitted 5\\'\\' (XL)"),
+    "Шорты Fitted 5'' (XL)",
+  );
 });
 
 test("після LLM прибираються одиночні дужки", () => {

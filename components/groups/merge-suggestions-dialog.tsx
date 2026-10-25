@@ -32,6 +32,7 @@ import {
   type GroupComparison,
 } from "@/lib/jev/comparison";
 import { productsLabel } from "@/lib/plural";
+import { cardImageUrl } from "@/lib/product-images";
 import { useAppStore } from "@/lib/store/app-store";
 import { notify } from "@/lib/store/toast-store";
 
@@ -50,10 +51,17 @@ function ComparisonGallery({
 }) {
   const [index, setIndex] = useState(0);
   const [failed, setFailed] = useState<Set<string>>(new Set());
+  const [variantFailed, setVariantFailed] = useState<Set<string>>(new Set());
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const safeIndex = images.length > 0 ? index % images.length : 0;
   const current = images[safeIndex];
   const imageFailed = current ? failed.has(current) : false;
+  // Для сравнения достаточно уменьшенного варианта; оригинал — в лайтбоксе.
+  const displaySrc = current
+    ? variantFailed.has(current)
+      ? current
+      : cardImageUrl(current)
+    : "";
 
   const showPrev = () => {
     if (images.length < 2) return;
@@ -76,19 +84,27 @@ function ComparisonGallery({
           title="Натисніть, щоб збільшити"
         >
           <Image
-            src={current}
+            src={displaySrc}
             alt={title}
             fill
             sizes="(max-width: 640px) 100vw, 480px"
             className="object-cover"
             unoptimized
-            onError={() =>
+            onError={() => {
+              if (displaySrc !== current) {
+                setVariantFailed((values) => {
+                  const next = new Set(values);
+                  next.add(current);
+                  return next;
+                });
+                return;
+              }
               setFailed((values) => {
                 const next = new Set(values);
                 next.add(current);
                 return next;
-              })
-            }
+              });
+            }}
           />
         </button>
       ) : (

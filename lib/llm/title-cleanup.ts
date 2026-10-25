@@ -5,6 +5,8 @@
  * выполняются кодом.
  */
 
+import { unescapeTitle } from "@/lib/grouping/title-text";
+
 export interface CleanTitleInput {
   id: string;
   title: string;
@@ -53,17 +55,26 @@ export function tokenizeTitle(title: string): string[] {
 const SIZE_LABEL_RE =
   /^(?:размер(?:ы|ов|ам|ами|ах|ом|е)?|розмір(?:и|ів|ам|ами|ах|ом|і)?|sizes?)$/u;
 
+const COLOR_LABEL_RE =
+  /^(?:цвет|цвета|цвету|цветом|цвете|колір|кольору|кольором|кольорі|кольори|кольорів|colou?rs?)$/u;
+
+/** Служебная подпись перед значением: «размер», «колір», «цвет:» и т.п. */
+function isServiceLabel(token: string): boolean {
+  const normalized = normalizeToken(token);
+  return SIZE_LABEL_RE.test(normalized) || COLOR_LABEL_RE.test(normalized);
+}
+
 /**
- * Убирает служебные подписи размера перед отправкой в LLM.
+ * Убирает служебные подписи размера и цвета перед отправкой в LLM.
  *
  * Удаляется только отдельное слово: «розмір», «розмір:», «(розмір)»,
- * «size», но не «розмірний».
+ * «size», «колір:», «цвет», но не «розмірний» и не «кольоровий».
  */
 export function normalizeTitleBeforeLlm(title: string): string {
-  return title
+  return unescapeTitle(title)
     .split(/\s+/)
     .filter(Boolean)
-    .filter((token) => !SIZE_LABEL_RE.test(normalizeToken(token)))
+    .filter((token) => !isServiceLabel(token))
     .join(" ")
     .replace(/\s+/g, " ")
     .trim();
@@ -138,11 +149,12 @@ const CLOSE_BRACKETS = new Map([
  * Парные скобки сохраняются, например артикул в `(HDSYR_839)`.
  */
 export function normalizeTitleAfterLlm(value: string): string {
+  const text = unescapeTitle(value);
   const stack: Array<{ close: string; index: number }> = [];
   const remove = new Set<number>();
 
-  for (let index = 0; index < value.length; index++) {
-    const char = value[index];
+  for (let index = 0; index < text.length; index++) {
+    const char = text[index];
     const close = OPEN_BRACKETS.get(char);
     if (close) {
       stack.push({ close, index });
@@ -163,8 +175,8 @@ export function normalizeTitleAfterLlm(value: string): string {
   for (const item of stack) remove.add(item.index);
 
   let result = "";
-  for (let index = 0; index < value.length; index++) {
-    if (!remove.has(index)) result += value[index];
+  for (let index = 0; index < text.length; index++) {
+    if (!remove.has(index)) result += text[index];
   }
 
   return result
