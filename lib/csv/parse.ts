@@ -70,6 +70,7 @@ export function parseCsv(text: string): ParseResult {
       goodsId,
       goodsTitle,
       goodsArticle,
+      goodsPrice: value("goodsPrice") ?? "",
       producersTitle: value("producersTitle") ?? "",
       categoryId: value("categoryId") ?? "",
       categoryTitle: value("categoryTitle") ?? "",

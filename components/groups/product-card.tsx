@@ -290,6 +290,18 @@ export const ProductCard = memo(function ProductCard({
         ) : null}
 
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-md border bg-muted/30 px-2.5 py-2 text-xs">
+          {product.goodsPrice?.trim() ? (
+            <>
+              <dt className="text-muted-foreground">Ціна</dt>
+              <dd
+                className="truncate text-foreground"
+                title={product.goodsPrice}
+              >
+                {product.goodsPrice}
+              </dd>
+            </>
+          ) : null}
+
           <dt className="text-muted-foreground">Розмір</dt>
           <dd className="truncate text-foreground" title={product.size ?? "—"}>
             {product.size || "—"}

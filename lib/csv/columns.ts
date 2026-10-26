@@ -45,6 +45,7 @@ const FIELD_SPECS: FieldSpec[] = [
   { field: "goodsId", label: "goods_id", base: "goods_id", required: true },
   { field: "goodsTitle", label: "goods_title", base: "goods_title", required: true },
   { field: "goodsArticle", label: "goods_article", base: "goods_article" },
+  { field: "goodsPrice", label: "GOODS_PRICE", base: "goods_price" },
   { field: "producersTitle", label: "producers_title", base: "producers_title" },
   { field: "categoryId", label: "goods_category_id", base: "goods_category_id", required: true },
   { field: "categoryTitle", label: "goods_category_title", base: "goods_category_title", required: true },
@@ -62,7 +63,11 @@ const FIELD_SPECS: FieldSpec[] = [
 /** Собирает сопоставление полей приложения с колонками файла. */
 export function buildColumnMapping(header: string[]): ColumnMapping[] {
   return FIELD_SPECS.map((spec) => {
-    const matches = header.filter((h) => baseName(h) === spec.base);
+    // Регистр в заголовках бывает разным: GOODS_PRICE и goods_price.
+    const base = spec.base.toLowerCase();
+    const matches = header.filter(
+      (h) => baseName(h).toLowerCase() === base,
+    );
 
     // Предпочитаем колонку с известным ID, но fallback на любую с тем же именем.
     let primary: string | null = null;

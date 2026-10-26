@@ -265,6 +265,20 @@ test("парсер выдерживает файл только с goods_id", ()
   assert.deepEqual(products[0].imageUrls, []);
 });
 
+test("колонка GOODS_PRICE находится в верхнем регистре", () => {
+  const { products, columnMap } = parseCsv(
+    "GOODS_ID,GOODS_TITLE,GOODS_PRICE\n1,Товар,1299.00\n",
+  );
+  assert.equal(products.length, 1);
+  assert.equal(products[0].goodsId, "1");
+  assert.equal(products[0].goodsTitle, "Товар");
+  assert.equal(products[0].goodsPrice, "1299.00");
+  assert.equal(
+    columnMap.find((m) => m.field === "goodsPrice")?.missing,
+    false,
+  );
+});
+
 test("BOM в начале файла не мешает найти колонки", () => {
   const { products, columnMap } = parseCsv(
     "\uFEFFgoods_id,goods_title\n1,Тестовый товар\n",

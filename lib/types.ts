@@ -14,6 +14,8 @@ export interface Product {
   /** Исходное название товара. Используется как название группы по умолчанию. */
   goodsTitle: string;
   goodsArticle: string;
+  /** Цена из файла (GOODS_PRICE). В старых файлах может отсутствовать. */
+  goodsPrice?: string;
   producersTitle: string;
   categoryId: string;
   categoryTitle: string;
@@ -101,6 +103,7 @@ export type ColumnField =
   | "goodsId"
   | "goodsTitle"
   | "goodsArticle"
+  | "goodsPrice"
   | "producersTitle"
   | "categoryId"
   | "categoryTitle"

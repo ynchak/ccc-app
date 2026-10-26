@@ -364,6 +364,7 @@ export function ProductDetailsDialog({
   const fields = product
     ? [
         { label: "Артикул", value: product.goodsArticle },
+        { label: "Ціна", value: product.goodsPrice },
         { label: "Бренд", value: product.producersTitle },
         { label: "Продавець", value: product.sellerTitle },
         { label: "Категорія", value: product.categoryTitle },
