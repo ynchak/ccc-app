@@ -31,7 +31,7 @@ import { ProductImageLightbox } from "@/components/groups/product-image-lightbox
 import { PRODUCT_DRAG_TYPE, setDragIds } from "@/lib/dnd";
 import { cardImageUrl } from "@/lib/product-images";
 import { gomerProductUrl, rozetkaProductUrl } from "@/lib/product-links";
-import { formatPrice } from "@/lib/price";
+import { formatPriceUah } from "@/lib/price";
 import { useAppStore } from "@/lib/store/app-store";
 import type { Product } from "@/lib/types";
 
@@ -72,7 +72,7 @@ export const ProductCard = memo(function ProductCard({
   const gomerUrl = gomerProductUrl(product);
   const rozetkaUrl = rozetkaProductUrl(product.goodsId);
   const price = product.goodsPrice?.trim()
-    ? formatPrice(product.goodsPrice)
+    ? formatPriceUah(product.goodsPrice)
     : "";
 
   const handleDragStart = (event: DragEvent<HTMLButtonElement>) => {
@@ -270,6 +270,18 @@ export const ProductCard = memo(function ProductCard({
           {product.goodsTitle}
         </p>
 
+        {price ? (
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-xs text-muted-foreground">Ціна</span>
+            <span
+              className="text-sm font-semibold tabular-nums text-foreground"
+              title={product.goodsPrice}
+            >
+              {price}
+            </span>
+          </div>
+        ) : null}
+
         {product.producersTitle || product.sellerTitle ? (
           <div className="flex flex-wrap gap-1">
             {product.producersTitle ? (
@@ -294,15 +306,6 @@ export const ProductCard = memo(function ProductCard({
         ) : null}
 
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-md border bg-muted/30 px-2.5 py-2 text-xs">
-          {price ? (
-            <>
-              <dt className="text-muted-foreground">Ціна</dt>
-              <dd className="truncate text-foreground" title={product.goodsPrice}>
-                {price}
-              </dd>
-            </>
-          ) : null}
-
           <dt className="text-muted-foreground">Розмір</dt>
           <dd className="truncate text-foreground" title={product.size ?? "—"}>
             {product.size || "—"}

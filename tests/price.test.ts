@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { formatPrice } from "@/lib/price";
+import { formatPrice, formatPriceUah } from "@/lib/price";
 
 test("незначащие нули после точки убираются", () => {
   assert.equal(formatPrice("1299.00"), "1299");
@@ -24,4 +24,12 @@ test("нечисловые значения не меняются", () => {
   assert.equal(formatPrice("1299 грн"), "1299 грн");
   assert.equal(formatPrice(""), "");
   assert.equal(formatPrice("  "), "");
+});
+
+test("к цене добавляется символ гривны", () => {
+  assert.equal(formatPriceUah("1299.00"), "1299 ₴");
+  assert.equal(formatPriceUah("1299,50"), "1299,5 ₴");
+  assert.equal(formatPriceUah("1 299,00"), "1 299 ₴");
+  assert.equal(formatPriceUah("1299 грн"), "1299 грн");
+  assert.equal(formatPriceUah(""), "");
 });

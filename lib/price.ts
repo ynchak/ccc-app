@@ -17,3 +17,13 @@ export function formatPrice(value: string): string {
   if (!separator || !fraction) return integer;
   return `${integer}${separator}${fraction}`;
 }
+
+/**
+ * Цена с символом гривны: `1299.00` → `1299 ₴`.
+ * Ненечисловые значения оставляем как есть, чтобы не получить «1299 грн ₴».
+ */
+export function formatPriceUah(value: string): string {
+  const formatted = formatPrice(value);
+  if (!formatted) return "";
+  return /^[-\d\s.,]+$/.test(formatted) ? `${formatted} ₴` : formatted;
+}
