@@ -270,6 +270,18 @@ export const ProductCard = memo(function ProductCard({
           {product.goodsTitle}
         </p>
 
+        {product.goodsId ? (
+          <div className="flex flex-wrap items-center gap-1">
+            <Badge
+              variant="outline"
+              className="font-mono text-[10px] text-muted-foreground"
+              title="goods_id"
+            >
+              ID {product.goodsId}
+            </Badge>
+          </div>
+        ) : null}
+
         {price ? (
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-xs text-muted-foreground">Ціна</span>
