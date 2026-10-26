@@ -31,6 +31,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { formatPrice } from "@/lib/price";
 import type { Product } from "@/lib/types";
 
 /** Одна строка заполненного атрибута. */
@@ -364,7 +365,12 @@ export function ProductDetailsDialog({
   const fields = product
     ? [
         { label: "Артикул", value: product.goodsArticle },
-        { label: "Ціна", value: product.goodsPrice },
+        {
+          label: "Ціна",
+          value: product.goodsPrice
+            ? formatPrice(product.goodsPrice)
+            : undefined,
+        },
         { label: "Бренд", value: product.producersTitle },
         { label: "Продавець", value: product.sellerTitle },
         { label: "Категорія", value: product.categoryTitle },

@@ -31,6 +31,7 @@ import { ProductImageLightbox } from "@/components/groups/product-image-lightbox
 import { PRODUCT_DRAG_TYPE, setDragIds } from "@/lib/dnd";
 import { cardImageUrl } from "@/lib/product-images";
 import { gomerProductUrl, rozetkaProductUrl } from "@/lib/product-links";
+import { formatPrice } from "@/lib/price";
 import { useAppStore } from "@/lib/store/app-store";
 import type { Product } from "@/lib/types";
 
@@ -70,6 +71,9 @@ export const ProductCard = memo(function ProductCard({
     : "";
   const gomerUrl = gomerProductUrl(product);
   const rozetkaUrl = rozetkaProductUrl(product.goodsId);
+  const price = product.goodsPrice?.trim()
+    ? formatPrice(product.goodsPrice)
+    : "";
 
   const handleDragStart = (event: DragEvent<HTMLButtonElement>) => {
     const state = useAppStore.getState();
@@ -290,14 +294,11 @@ export const ProductCard = memo(function ProductCard({
         ) : null}
 
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-md border bg-muted/30 px-2.5 py-2 text-xs">
-          {product.goodsPrice?.trim() ? (
+          {price ? (
             <>
               <dt className="text-muted-foreground">Ціна</dt>
-              <dd
-                className="truncate text-foreground"
-                title={product.goodsPrice}
-              >
-                {product.goodsPrice}
+              <dd className="truncate text-foreground" title={product.goodsPrice}>
+                {price}
               </dd>
             </>
           ) : null}
