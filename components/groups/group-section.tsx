@@ -69,8 +69,14 @@ export const GroupSection = memo(function GroupSection({
   const moveProducts = useAppStore((s) => s.moveProducts);
   const selectProducts = useAppStore((s) => s.selectProducts);
   const resetGroupTitle = useAppStore((s) => s.resetGroupTitle);
+  const activeDatasetId = useAppStore((s) => s.activeDatasetId);
+  const toggleGroupExpanded = useAppStore((s) => s.toggleGroupExpanded);
 
-  const [isOpen, setIsOpen] = useState(true);
+  const isExpanded = useAppStore((s) => {
+    if (activeDatasetId === null) return true;
+    return s.groupExpandedByDataset[activeDatasetId]?.[group.id] ?? true;
+  });
+
   const [isDragOver, setIsDragOver] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(group.title);
@@ -243,11 +249,11 @@ export const GroupSection = memo(function GroupSection({
             <div className="relative flex min-w-0 flex-1 items-center gap-2">
               <button
                 type="button"
-                onClick={() => setIsOpen((value) => !value)}
+                onClick={() => toggleGroupExpanded(activeDatasetId, group.id)}
                 disabled={isEditing}
-                aria-expanded={isOpen}
+                aria-expanded={isExpanded}
                 aria-controls={`group-content-${group.id}`}
-                aria-label={`${isOpen ? "Згорнути" : "Розгорнути"} групу ${group.title}`}
+                aria-label={`${isExpanded ? "Згорнути" : "Розгорнути"} групу ${group.title}`}
                 className="absolute inset-0 cursor-pointer rounded-md bg-transparent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-default"
               />
 
@@ -316,7 +322,7 @@ export const GroupSection = memo(function GroupSection({
               <HugeiconsIcon
                 icon={ArrowDown01Icon}
                 className={`pointer-events-none size-4 shrink-0 text-muted-foreground transition-transform ${
-                  isOpen ? "" : "-rotate-90"
+                  isExpanded ? "" : "-rotate-90"
                 }`}
               />
             </div>
@@ -392,7 +398,7 @@ export const GroupSection = memo(function GroupSection({
           </div>
         </CardHeader>
 
-        {isOpen ? (
+        {isExpanded ? (
           <CardContent id={`group-content-${group.id}`} className="py-3">
             {products.length > 0 ? (
               <div className="grid gap-3" style={cardGridStyle(cardSize)}>

@@ -192,6 +192,8 @@ interface AppState {
   quickFilter: QuickFilter;
   /** Настройки фильтров по datasetId — переживают перезагрузку страницы. */
   filtersByDataset: Record<string, DatasetFilters>;
+  /** Свернутости групп по датасетам: datasetId -> groupId -> isExpanded. */
+  groupExpandedByDataset: Record<number, Record<number, boolean>>;
   /** Текущая страница списка групп (1-based). */
   page: number;
   pageSize: PageSize;
@@ -233,6 +235,7 @@ interface AppState {
     fallbackTop?: number;
   }) => void;
   clearRestoreGroupRequest: () => void;
+  toggleGroupExpanded: (datasetId: number | null, groupId: number) => void;
   toggleGroupSelection: (groupId: number) => void;
   clearGroupSelection: () => void;
   toggleProductSelection: (productId: number) => void;
@@ -769,6 +772,7 @@ export const useAppStore = create<AppState>()(
     sortBy: "category",
     quickFilter: "all",
     filtersByDataset: {},
+    groupExpandedByDataset: {},
     page: 1,
     pageSize: DEFAULT_PAGE_SIZE,
     cardSize: DEFAULT_CARD_WIDTH,
@@ -1095,6 +1099,22 @@ export const useAppStore = create<AppState>()(
 
     clearRestoreGroupRequest() {
       set({ restoreGroupRequest: null });
+    },
+
+    /** Переключает свернутость группы в рамках активного датасета. */
+    toggleGroupExpanded(datasetId: number | null, groupId: number) {
+      if (datasetId === null) return;
+      set((state) => {
+        const byDataset = state.groupExpandedByDataset[datasetId] ?? {};
+        const nextByDataset = { ...byDataset };
+        nextByDataset[groupId] = !byDataset[groupId];
+        return {
+          groupExpandedByDataset: {
+            ...state.groupExpandedByDataset,
+            [datasetId]: nextByDataset,
+          },
+        };
+      });
     },
 
     setCategoryFilter(value) {
@@ -2178,7 +2198,10 @@ export const useAppStore = create<AppState>()(
       name: "ccc-filters-v1",
       version: 1,
       storage: filterStorage,
-      partialize: (state) => ({ filtersByDataset: state.filtersByDataset }),
+      partialize: (state) => ({
+        filtersByDataset: state.filtersByDataset,
+        groupExpandedByDataset: state.groupExpandedByDataset,
+      }),
     },
   ),
 );
