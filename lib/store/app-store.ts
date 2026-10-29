@@ -1142,12 +1142,13 @@ export const useAppStore = create<AppState>()(
       set((state) => {
         const byDataset = state.groupExpandedByDataset[datasetId] ?? {};
         const nextByDataset = { ...byDataset };
-        // Дефолт — развёрнуто (true). Первый клик должен свернуть (false),
-        // второй — развернуть (true или удалить запись).
+        // Дефолт (запись отсутствует) — развёрнуто (true).
+        // Первый клик на развёрнутую группу → сворачиваем (false).
+        // Клик на свёрнутую (false) → разворачиваем (удаляем запись, возвращаемся к дефолту true).
         if (byDataset[groupId] === false) {
-          nextByDataset[groupId] = true;
-        } else {
           delete nextByDataset[groupId];
+        } else {
+          nextByDataset[groupId] = false;
         }
         return {
           groupExpandedByDataset: {
