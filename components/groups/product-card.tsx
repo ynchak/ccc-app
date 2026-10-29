@@ -144,7 +144,7 @@ export const ProductCard = memo(function ProductCard({
                 alt={product.goodsTitle}
                 fill
                 sizes="(max-width: 640px) 100vw, 320px"
-                className="object-cover"
+                className="object-contain"
                 unoptimized
                 decoding="async"
                 draggable={false}
