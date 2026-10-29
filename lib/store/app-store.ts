@@ -77,7 +77,6 @@ import {
   type PageSize,
 } from "@/lib/pagination";
 import { sortGroupProducts } from "@/lib/grouping/product-sort";
-import { useUIStore } from "@/lib/store/uiStore";
 import type { Dataset, Group, Product } from "@/lib/types";
 
 /** Сортировка групп. */
@@ -198,6 +197,8 @@ interface AppState {
   quickFilter: QuickFilter;
   /** Настройки фильтров по datasetId — переживают перезагрузку страницы. */
   filtersByDataset: Record<string, DatasetFilters>;
+  /** Свернутость групп по датасетам: datasetId -> groupId -> isExpanded. */
+  groupExpandedByDataset: Record<number, Record<number, boolean>>;
   /** Текущая страница списка групп (1-based). */
   page: number;
   pageSize: PageSize;
@@ -239,6 +240,7 @@ interface AppState {
     fallbackTop?: number;
   }) => void;
   clearRestoreGroupRequest: () => void;
+  toggleGroupExpanded: (datasetId: number | null, groupId: number) => void;
   toggleGroupSelection: (groupId: number) => void;
   clearGroupSelection: () => void;
   toggleProductSelection: (productId: number) => void;
@@ -795,6 +797,7 @@ export const useAppStore = create<AppState>()(
     sortBy: "category",
     quickFilter: "all",
     filtersByDataset: {},
+    groupExpandedByDataset: {},
     page: 1,
     pageSize: DEFAULT_PAGE_SIZE,
     cardSize: DEFAULT_CARD_WIDTH,
@@ -1047,15 +1050,18 @@ export const useAppStore = create<AppState>()(
       const filtersByDataset = { ...state.filtersByDataset };
       delete filtersByDataset[String(datasetId)];
 
-      // Очищаем свернутость групп удалённого датасета из UI-стора.
-      useUIStore.setState((state) => {
-        const next = { ...state.groupExpandedByDataset };
-        delete next[datasetId];
-        return { groupExpandedByDataset: next };
-      });
+      // Очищаем свернутость групп удалённого датасета.
+      const nextExpanded = { ...state.groupExpandedByDataset };
+      delete nextExpanded[datasetId];
 
       // Файл исчезает из интерфейса сразу, а очистка IndexedDB идёт фоном.
-      set({ datasets, filtersByDataset, undoStack: [], isLoading: true });
+      set({
+        datasets,
+        filtersByDataset,
+        groupExpandedByDataset: nextExpanded,
+        undoStack: [],
+        isLoading: true,
+      });
 
       try {
         if (wasActive) {
@@ -1128,6 +1134,28 @@ export const useAppStore = create<AppState>()(
 
     clearRestoreGroupRequest() {
       set({ restoreGroupRequest: null });
+    },
+
+    /** Переключает свернутость группы в рамках активного датасета. */
+    toggleGroupExpanded(datasetId: number | null, groupId: number) {
+      if (datasetId === null) return;
+      set((state) => {
+        const byDataset = state.groupExpandedByDataset[datasetId] ?? {};
+        const nextByDataset = { ...byDataset };
+        // Дефолт — развёрнуто (true). Первый клик должен свернуть (false),
+        // второй — развернуть (true или удалить запись).
+        if (byDataset[groupId] === false) {
+          nextByDataset[groupId] = true;
+        } else {
+          delete nextByDataset[groupId];
+        }
+        return {
+          groupExpandedByDataset: {
+            ...state.groupExpandedByDataset,
+            [datasetId]: nextByDataset,
+          },
+        };
+      });
     },
 
     setCategoryFilter(value) {
@@ -2226,6 +2254,7 @@ export const useAppStore = create<AppState>()(
       storage: filterStorage,
       partialize: (state) => ({
         filtersByDataset: state.filtersByDataset,
+        groupExpandedByDataset: state.groupExpandedByDataset,
       }),
     },
   ),
