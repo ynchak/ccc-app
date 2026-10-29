@@ -40,6 +40,10 @@ import {
   useAppStore,
   useGroupProducts,
 } from "@/lib/store/app-store";
+import {
+  useUIGroupExpanded,
+  useUIToggleGroupExpanded,
+} from "@/lib/store/uiStore";
 import { notify } from "@/lib/store/toast-store";
 import type { Group, Product } from "@/lib/types";
 
@@ -70,12 +74,9 @@ export const GroupSection = memo(function GroupSection({
   const selectProducts = useAppStore((s) => s.selectProducts);
   const resetGroupTitle = useAppStore((s) => s.resetGroupTitle);
   const activeDatasetId = useAppStore((s) => s.activeDatasetId);
-  const toggleGroupExpanded = useAppStore((s) => s.toggleGroupExpanded);
+  const toggleGroupExpanded = useUIToggleGroupExpanded();
 
-  const isExpanded = useAppStore((s) => {
-    if (activeDatasetId === null) return true;
-    return s.groupExpandedByDataset[activeDatasetId]?.[group.id] ?? true;
-  });
+  const isExpanded = useUIGroupExpanded(activeDatasetId, group.id);
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [isEditing, setIsEditing] = useState(false);

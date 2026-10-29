@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useRef } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Cancel01Icon,
@@ -104,6 +105,30 @@ export function GroupHeaderControls({
 
   const categories = useCategories();
 
+  // Debounce поиска, чтобы не перерендеривать весь список при каждом нажатии клавиши.
+  const searchDebounceRef = useRef<number | null>(null);
+  const handleSearchDebounced = useCallback(
+    (value: string) => {
+      if (searchDebounceRef.current) {
+        window.clearTimeout(searchDebounceRef.current);
+      }
+      searchDebounceRef.current = window.setTimeout(() => {
+        searchDebounceRef.current = null;
+        onSearchChange(value);
+      }, 300);
+    },
+    [onSearchChange],
+  );
+
+  // Сбрасываем таймер debounce при размонтировании.
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) {
+        window.clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, []);
+
   const categoryLabel = (value: string | null) => {
     if (value === null) return "Усі категорії";
     return (
@@ -125,10 +150,29 @@ export function GroupHeaderControls({
         />
         <Input
           value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
+          onChange={(event) =>
+            handleSearchDebounced(
+              (event.target as HTMLInputElement).value,
+            )
+          }
           onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              // Сразу применяем поиск при нажатии Enter, не дожидаясь debounce.
+              if (searchDebounceRef.current) {
+                window.clearTimeout(searchDebounceRef.current);
+                searchDebounceRef.current = null;
+              }
+              onSearchChange(
+                (event.target as HTMLInputElement).value,
+              );
+            }
             if (event.key === "Escape" && search) {
               event.preventDefault();
+              if (searchDebounceRef.current) {
+                window.clearTimeout(searchDebounceRef.current);
+                searchDebounceRef.current = null;
+              }
               onSearchChange("");
             }
           }}

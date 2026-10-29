@@ -77,6 +77,7 @@ import {
   type PageSize,
 } from "@/lib/pagination";
 import { sortGroupProducts } from "@/lib/grouping/product-sort";
+import { useUIStore } from "@/lib/store/uiStore";
 import type { Dataset, Group, Product } from "@/lib/types";
 
 /** Сортировка групп. */
@@ -167,10 +168,15 @@ export interface CleanupRunResult {
   jevAnswered?: number;
 }
 
-/** Запись истории для undo. */
+/** Запись истории для undo. Хранит дифф вместо полного снимка всех групп. */
 interface UndoEntry {
   label: string;
-  groups: Group[];
+  /** Предыдущее состояние изменённых групп: id → группа. */
+  changes: Map<number, Group>;
+  /** Группы, которые были удалены в этой операции: id → группа. */
+  deletedGroups: Map<number, Group>;
+  /** ID групп, которые были добавлены в этой операции. */
+  addedIds: number[];
   orderedGroupIds: number[];
 }
 
@@ -192,8 +198,6 @@ interface AppState {
   quickFilter: QuickFilter;
   /** Настройки фильтров по datasetId — переживают перезагрузку страницы. */
   filtersByDataset: Record<string, DatasetFilters>;
-  /** Свернутости групп по датасетам: datasetId -> groupId -> isExpanded. */
-  groupExpandedByDataset: Record<number, Record<number, boolean>>;
   /** Текущая страница списка групп (1-based). */
   page: number;
   pageSize: PageSize;
@@ -235,7 +239,6 @@ interface AppState {
     fallbackTop?: number;
   }) => void;
   clearRestoreGroupRequest: () => void;
-  toggleGroupExpanded: (datasetId: number | null, groupId: number) => void;
   toggleGroupSelection: (groupId: number) => void;
   clearGroupSelection: () => void;
   toggleProductSelection: (productId: number) => void;
@@ -616,6 +619,24 @@ export const useAppStore = create<AppState>()(
               : dataset,
           );
 
+    // Вычисляем дифф: какие группы изменились, добавились или удалились.
+    const changes = new Map<number, Group>();
+    const deletedGroups = new Map<number, Group>();
+    const addedIds: number[] = [];
+    for (const [id, beforeGroup] of before) {
+      const afterGroup = after.get(id);
+      if (!afterGroup) {
+        deletedGroups.set(id, beforeGroup);
+      } else if (beforeGroup !== afterGroup) {
+        changes.set(id, beforeGroup);
+      }
+    }
+    for (const id of after.keys()) {
+      if (!before.has(id)) {
+        addedIds.push(id);
+      }
+    }
+
     set({
       groups: after,
       orderedGroupIds: buildStableOrder(
@@ -633,7 +654,9 @@ export const useAppStore = create<AppState>()(
         ...state.undoStack,
         {
           label,
-          groups: [...before.values()],
+          changes,
+          deletedGroups,
+          addedIds,
           orderedGroupIds: [...state.orderedGroupIds],
         },
       ].slice(-UNDO_LIMIT),
@@ -772,7 +795,6 @@ export const useAppStore = create<AppState>()(
     sortBy: "category",
     quickFilter: "all",
     filtersByDataset: {},
-    groupExpandedByDataset: {},
     page: 1,
     pageSize: DEFAULT_PAGE_SIZE,
     cardSize: DEFAULT_CARD_WIDTH,
@@ -1025,6 +1047,13 @@ export const useAppStore = create<AppState>()(
       const filtersByDataset = { ...state.filtersByDataset };
       delete filtersByDataset[String(datasetId)];
 
+      // Очищаем свернутость групп удалённого датасета из UI-стора.
+      useUIStore.setState((state) => {
+        const next = { ...state.groupExpandedByDataset };
+        delete next[datasetId];
+        return { groupExpandedByDataset: next };
+      });
+
       // Файл исчезает из интерфейса сразу, а очистка IndexedDB идёт фоном.
       set({ datasets, filtersByDataset, undoStack: [], isLoading: true });
 
@@ -1099,22 +1128,6 @@ export const useAppStore = create<AppState>()(
 
     clearRestoreGroupRequest() {
       set({ restoreGroupRequest: null });
-    },
-
-    /** Переключает свернутость группы в рамках активного датасета. */
-    toggleGroupExpanded(datasetId: number | null, groupId: number) {
-      if (datasetId === null) return;
-      set((state) => {
-        const byDataset = state.groupExpandedByDataset[datasetId] ?? {};
-        const nextByDataset = { ...byDataset };
-        nextByDataset[groupId] = !byDataset[groupId];
-        return {
-          groupExpandedByDataset: {
-            ...state.groupExpandedByDataset,
-            [datasetId]: nextByDataset,
-          },
-        };
-      });
     },
 
     setCategoryFilter(value) {
@@ -2159,7 +2172,20 @@ export const useAppStore = create<AppState>()(
       const entry = state.undoStack[state.undoStack.length - 1];
       if (!entry) return false;
 
-      const restored = new Map(entry.groups.map((group) => [group.id, group]));
+      // Восстанавливаем состояние через дифф: отменяем изменения, возвращаем удалённые
+      // группы и убираю добавленные в этой операции группы.
+      const restored = new Map(state.groups);
+      for (const [id, previousGroup] of entry.changes) {
+        restored.set(id, previousGroup);
+      }
+      for (const [id, previousGroup] of entry.deletedGroups) {
+        restored.set(id, previousGroup);
+      }
+      for (const id of entry.addedIds) {
+        restored.delete(id);
+      }
+
+      // Синхронизируем с IndexedDB.
       await persistDiff(state.groups, restored);
 
       const datasetId = state.activeDatasetId;
@@ -2200,7 +2226,6 @@ export const useAppStore = create<AppState>()(
       storage: filterStorage,
       partialize: (state) => ({
         filtersByDataset: state.filtersByDataset,
-        groupExpandedByDataset: state.groupExpandedByDataset,
       }),
     },
   ),

@@ -123,6 +123,10 @@ export const ProductCard = memo(function ProductCard({
           ? "border-foreground/30 ring-2 ring-foreground/10"
           : "border-border hover:border-foreground/20"
       }`}
+      style={{
+        containIntrinsicSize: "320px 520px",
+        contentVisibility: "auto",
+      }}
     >
       <div className="relative aspect-square w-full overflow-hidden bg-muted">
         <button
@@ -144,6 +148,7 @@ export const ProductCard = memo(function ProductCard({
                 unoptimized
                 decoding="async"
                 draggable={false}
+                loading="lazy"
                 onError={handleImageError}
               />
             </span>

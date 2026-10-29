@@ -225,43 +225,71 @@ export function AppShell() {
     const container = mainRef.current;
     if (!container || activeDatasetId === null) return;
 
-    let timer = 0;
-    const updateLastViewed = () => {
-      const state = useAppStore.getState();
-      if (state.search.trim() || state.restoreGroupRequest) return;
-      const sections = container.querySelectorAll<HTMLElement>(
-        "[data-group-number]",
-      );
-      const containerTop = container.getBoundingClientRect().top;
-      let first: HTMLElement | null = null;
-      for (const section of sections) {
-        if (section.getBoundingClientRect().bottom > containerTop + 1) {
-          first = section;
-          break;
+    // Отслеживаем первую видимую группу через IntersectionObserver,
+    // чтобы не читать getBoundingClientRect на каждом скролле.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const state = useAppStore.getState();
+        if (state.search.trim() || state.restoreGroupRequest) return;
+
+        // Находим первую секцию, которая intersects и находится у верхнего края.
+        let firstVisible: HTMLElement | null = null;
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const el = entry.target as HTMLElement;
+            const rect = entry.boundingClientRect;
+            if (!firstVisible || rect.top < firstVisible.getBoundingClientRect().top) {
+              firstVisible = el;
+            }
+          }
+        }
+
+        if (!firstVisible) return;
+        const number = Number(firstVisible.dataset.groupNumber);
+        if (!Number.isInteger(number) || number <= 0) return;
+
+        const currentNumber =
+          useAppStore
+            .getState()
+            .filtersByDataset[String(activeDatasetId)]?.lastViewedGroupNumber;
+        if (currentNumber !== number) {
+          // zustand persist автоматически запишет в localStorage.
+          useAppStore.getState().setLastViewedGroupNumber(number);
+        }
+      },
+      {
+        root: container,
+        rootMargin: "0px 0px -1px 0px",
+        threshold: 0,
+      },
+    );
+
+    const sections = container.querySelectorAll<HTMLElement>(
+      "[data-group-number]",
+    );
+    for (const section of sections) {
+      observer.observe(section);
+    }
+
+    // Первичное определение при монтировании.
+    const firstSection = sections[0];
+    if (firstSection) {
+      const number = Number(firstSection.dataset.groupNumber);
+      if (Number.isInteger(number) && number > 0) {
+        const currentNumber =
+          useAppStore
+            .getState()
+            .filtersByDataset[String(activeDatasetId)]?.lastViewedGroupNumber;
+        if (currentNumber !== number) {
+          useAppStore.getState().setLastViewedGroupNumber(number);
         }
       }
-      if (!first) return;
-      const number = Number(first.dataset.groupNumber);
-      if (!Number.isInteger(number) || number <= 0) return;
-      state.setLastViewedGroupNumber(number);
-    };
-
-    const onScroll = () => {
-      if (timer) return;
-      timer = window.setTimeout(() => {
-        timer = 0;
-        updateLastViewed();
-      }, 150);
-    };
-
-    container.addEventListener("scroll", onScroll, { passive: true });
-    updateLastViewed();
+    }
 
     return () => {
-      container.removeEventListener("scroll", onScroll);
-      if (timer) window.clearTimeout(timer);
+      observer.disconnect();
     };
-  }, [activeDatasetId, pageData.page, pageSize, visibleGroups]);
+  }, [activeDatasetId, pageData.page, pageSize]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
