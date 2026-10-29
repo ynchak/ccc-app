@@ -323,10 +323,14 @@ export const ProductCard = memo(function ProductCard({
         ) : null}
 
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-md border bg-muted/30 px-2.5 py-2 text-xs">
-          <dt className="text-muted-foreground">Розмір</dt>
-          <dd className="truncate text-foreground" title={product.size ?? "—"}>
-            {product.size || "—"}
-          </dd>
+          {product.size ? (
+            <>
+              <dt className="text-muted-foreground">Розмір</dt>
+              <dd className="truncate text-foreground" title={product.size}>
+                {product.size}
+              </dd>
+            </>
+          ) : null}
 
           {product.height ? (
             <>
@@ -340,26 +344,30 @@ export const ProductCard = memo(function ProductCard({
             </>
           ) : null}
 
-          <dt className="text-muted-foreground">Колір</dt>
-          <dd
-            className="flex min-w-0 items-center gap-1 text-foreground"
-            title={
-              product.colorSource === "suggested"
-                ? `${product.color} (запропоновано)`
-                : (product.color ?? "—")
-            }
-          >
-            <span className="truncate">{product.color || "—"}</span>
-            {product.colorSource === "suggested" ? (
-              <Badge
-                variant="outline"
-                className="h-4 shrink-0 border-amber-500/30 bg-amber-500/10 px-1 text-[9px] text-amber-700 dark:text-amber-300"
-                title="Колір запропоновано сервісом"
+          {product.color ? (
+            <>
+              <dt className="text-muted-foreground">Колір</dt>
+              <dd
+                className="flex min-w-0 items-center gap-1 text-foreground"
+                title={
+                  product.colorSource === "suggested"
+                    ? `${product.color} (запропоновано)`
+                    : product.color
+                }
               >
-                ШІ
-              </Badge>
-            ) : null}
-          </dd>
+                <span className="truncate">{product.color}</span>
+                {product.colorSource === "suggested" ? (
+                  <Badge
+                    variant="outline"
+                    className="h-4 shrink-0 border-amber-500/30 bg-amber-500/10 px-1 text-[9px] text-amber-700 dark:text-amber-300"
+                    title="Колір запропоновано сервісом"
+                  >
+                    ШІ
+                  </Badge>
+                ) : null}
+              </dd>
+            </>
+          ) : null}
         </dl>
 
         {product.goodsArticle ? (
