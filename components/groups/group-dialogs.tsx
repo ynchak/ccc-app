@@ -278,6 +278,7 @@ export function MoveProductsDialog({
   const categoryId = selectedProducts[0]?.categoryId ?? "";
 
   // Показываем только группы той же категории — товары не должны её менять.
+  // categoryId товара должен совпадать с categoryId группы.
   const candidates = useMemo(() => {
     if (selectedProducts.length === 0 || mixedCategories) return [];
     const q = query.trim().toLowerCase();
@@ -291,6 +292,20 @@ export function MoveProductsDialog({
       )
       .sort((a, b) => a.title.localeCompare(b.title, "uk"));
   }, [groups, selectedProducts.length, mixedCategories, categoryId, query]);
+
+  // Dev-only предупреждение: если категория выбрана, но групп не найдено,
+  // возможно categoryId товара не совпадает с categoryId групп в данных.
+  if (
+    process.env.NODE_ENV === "development" &&
+    selectedProducts.length > 0 &&
+    !mixedCategories &&
+    categoryId &&
+    candidates.length === 0
+  ) {
+    console.warn(
+      `[MoveProductsDialog] Категория товара "${categoryId}" не совпадает с категориями групп. Всего групп: ${groups.size}`,
+    );
+  }
 
   const ids = selectedProducts.map((product) => product.id);
 
