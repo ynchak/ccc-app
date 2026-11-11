@@ -280,7 +280,13 @@ export function MoveProductsDialog({
   // Показываем только группы той же категории — товары не должны её менять.
   // categoryId товара должен совпадать с categoryId группы.
   const candidates = useMemo(() => {
-    if (selectedProducts.length === 0 || mixedCategories) return [];
+    if (
+      selectedProducts.length === 0 ||
+      mixedCategories ||
+      !categoryId
+    ) {
+      return [];
+    }
     const q = query.trim().toLowerCase();
     return [...groups.values()]
       .filter((group) => group.categoryId === categoryId)
