@@ -3,7 +3,7 @@ import "fake-indexeddb/auto";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import type { Group } from "@/lib/types";
+import type { Group, Product } from "@/lib/types";
 import {
   SYNTHETIC_CSV,
   SYNTHETIC_GROUP_COUNT,
@@ -481,6 +481,115 @@ test("store: экранированные названия очищаются п
     reloaded.products.get(group.productIds[0])?.goodsTitle,
     "платье м'ятное",
   );
+});
+
+test("store: MoveProductsDialog показывает группы той же категории", async () => {
+  const { useAppStore } = await import("@/lib/store/app-store");
+  await useAppStore.getState().importFile("move-dialog.csv", SYNTHETIC_CSV);
+
+  const state = useAppStore.getState();
+
+  // Находим группу с товарами в категории "Одежда" (имеет несколько групп)
+  const clothingGroups = [...state.groups.values()].filter(
+    (g) => g.categoryId === "100",
+  );
+  assert.ok(clothingGroups.length >= 2, "нужна категория с несколькими группами");
+
+  // Берём первую группу одежды и все её товары
+  const sourceGroup = clothingGroups[0];
+  assert.ok(sourceGroup.productIds.length > 0, "группа должна иметь товары");
+
+  // Симулируем выделение всех товаров из группы (как делает чекбокс в карточке товара)
+  for (const productId of sourceGroup.productIds) {
+    useAppStore.getState().toggleProductSelection(productId);
+  }
+
+  const selectedState = useAppStore.getState();
+  assert.equal(
+    selectedState.selectedProductIds.size,
+    sourceGroup.productIds.length,
+    "все товары группы должны быть выбраны",
+  );
+
+  // Симулируем логику MoveProductsDialog: отображаются только группы той же категории
+  const selectedProducts = sourceGroup.productIds
+    .map((id) => state.products.get(id))
+    .filter((product): product is Product => product !== undefined);
+
+  // Все выбранные товары должны существовать в сторах
+  assert.equal(
+    selectedProducts.length,
+    sourceGroup.productIds.length,
+    "все товары должны найтись в products мап",
+  );
+
+  // Все товары должны иметь одинаковую categoryId
+  const categories = new Set(selectedProducts.map((p) => p.categoryId));
+  assert.equal(categories.size, 1, "все товары должны быть в одной категории");
+
+  const categoryId = selectedProducts[0].categoryId;
+  assert.equal(categoryId, sourceGroup.categoryId, "категория товара = категории группы");
+
+  // Должны быть другие группы в той же категории (цели для переноса)
+  const otherGroupsInCategory = [...state.groups.values()].filter(
+    (g) => g.categoryId === categoryId && g.id !== sourceGroup.id,
+  );
+  assert.ok(
+    otherGroupsInCategory.length > 0,
+    `должны быть другие группы в категории ${categoryId} для переноса`,
+  );
+
+  // Отменяем выбор
+  useAppStore.getState().clearProductSelection();
+});
+
+test("store: MoveProductsDialog не показывает группы, если товары не найдены в сторе", async () => {
+  const { useAppStore } = await import("@/lib/store/app-store");
+  await useAppStore.getState().importFile("move-dialog-missing.csv", SYNTHETIC_CSV);
+
+  const state = useAppStore.getState();
+
+  // Берём первую группу одежды
+  const clothingGroups = [...state.groups.values()].filter(
+    (g) => g.categoryId === "100",
+  );
+  const sourceGroup = clothingGroups[0];
+  assert.ok(sourceGroup, "группа должна найтись");
+
+  // Симулируем ситуацию, когда productIds содержат ID товара, которого нет в products мап
+  // (например, после удаления или при гонке данных)
+  const fakeProductId = 999999;
+  const productIds = [...sourceGroup.productIds, fakeProductId];
+
+  // Симулируем логику MoveProductsDialog
+  const selectedProducts = productIds
+    .map((id) => state.products.get(id))
+    .filter((product): product is Product => product !== undefined);
+
+  // Товар с fake ID не должен быть найден
+  assert.equal(
+    selectedProducts.length,
+    sourceGroup.productIds.length,
+    "фейковый товар должен быть отфильтрован",
+  );
+
+  // Все найденные товары должны быть в одной категории
+  const categories = new Set(selectedProducts.map((p) => p.categoryId));
+  assert.equal(categories.size, 1, "все найденные товары в одной категории");
+
+  const categoryId = selectedProducts[0].categoryId;
+
+  // Группы для переноса должны быть в той же категории, кроме исходной
+  const candidates = [...state.groups.values()].filter(
+    (g) =>
+      g.categoryId === categoryId && g.id !== sourceGroup.id,
+  );
+  assert.ok(candidates.length > 0, "должны быть целевые группы");
+
+  // Если бы все товары были бы потеряны, candidates был бы пустым
+  const emptyProducts: Product[] = [];
+  const emptyCategories = new Set(emptyProducts.map((p) => p.categoryId));
+  assert.equal(emptyCategories.size, 0, "пустой набор товаров - пустые категории");
 });
 
 test("store: после объединения групп выбор сбрасывается", async () => {

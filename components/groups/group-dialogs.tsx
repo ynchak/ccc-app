@@ -329,14 +329,16 @@ export function MoveProductsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] min-w-0 overflow-x-hidden overflow-y-auto sm:max-w-xl">
+      <DialogContent
+        className="max-h-[calc(100dvh-2rem)] min-w-0 overflow-x-hidden overflow-y-auto sm:max-w-[56rem]"
+      >
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="min-w-0 truncate">
             {ids.length === 1
               ? "Перемістити товар"
               : `Перемістити товари (${ids.length})`}
           </DialogTitle>
-          <DialogDescription className="break-words">
+          <DialogDescription className="break-words min-w-0">
             {selectedProducts.length === 1
               ? selectedProducts[0].goodsTitle
               : mixedCategories
@@ -353,8 +355,8 @@ export function MoveProductsDialog({
             категорій. Можна винести кожен товар в окрему групу.
           </p>
         ) : (
-          <div className="flex flex-col gap-2">
-            <div className="relative">
+          <div className="flex flex-col gap-2 min-w-0">
+            <div className="relative min-w-0">
               <HugeiconsIcon
                 icon={Search01Icon}
                 className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
@@ -363,7 +365,7 @@ export function MoveProductsDialog({
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Пошук групи…"
-                className="pl-8"
+                className="pl-8 min-w-0"
               />
             </div>
 
@@ -398,14 +400,22 @@ export function MoveProductsDialog({
           </div>
         )}
 
-        <DialogFooter>
+        <DialogFooter className="flex flex-col sm:flex-row gap-2 min-w-0">
           <DialogClose render={<Button variant="outline" />}>
             Скасувати
           </DialogClose>
-          <Button variant="secondary" onClick={() => void handleDetach()}>
+          <Button
+            variant="secondary"
+            onClick={() => void handleDetach()}
+            className="w-full sm:w-auto"
+          >
             {ids.length === 1 ? "В окрему групу" : "Кожен окремо"}
           </Button>
-          <Button onClick={() => void handleCreate()} disabled={mixedCategories}>
+          <Button
+            onClick={() => void handleCreate()}
+            disabled={mixedCategories}
+            className="w-full sm:w-auto"
+          >
             Створити нову групу
           </Button>
         </DialogFooter>
