@@ -1,5 +1,17 @@
+import { sortGroupProducts } from "@/lib/grouping/product-sort";
+import { parsePriceNumber } from "@/lib/price";
 import type { Group, Product } from "@/lib/types";
 import { articleBase } from "@/lib/jev/candidates";
+
+/** Товар группы для превью в сравнении. */
+export interface ComparisonProduct {
+  id: number;
+  title: string;
+  price: string | null;
+  size: string | null;
+  color: string | null;
+  images: string[];
+}
 
 /** Данные одной группы для сравнительной карточки. */
 export interface ComparisonSide {
@@ -14,8 +26,8 @@ export interface ComparisonSide {
   mdgs: string[];
   sizes: string[];
   colors: string[];
-  images: string[];
-  sampleTitles: string[];
+  prices: string[];
+  products: ComparisonProduct[];
 }
 
 /** Общие и различные признаки пары групп. */
@@ -28,18 +40,18 @@ export interface GroupComparison {
     articleBases: string[];
     mdgs: string[];
     category: string;
+    prices: string[];
   };
   differences: {
     titles: boolean;
     articles: boolean;
     colors: boolean;
     sizes: boolean;
+    prices: boolean;
   };
 }
 
 const MAX_VALUES = 8;
-const MAX_SAMPLES = 3;
-const MAX_IMAGES = 3;
 
 function unique(
   values: Iterable<string | null | undefined>,
@@ -66,6 +78,61 @@ function intersection(a: string[], b: string[]): string[] {
   );
 }
 
+/** Ключ цены: числа сравниваем как числа, остальное — как текст. */
+function priceKey(value: string): string {
+  const number = parsePriceNumber(value);
+  return number !== null
+    ? `number:${number}`
+    : `text:${value.trim().toLocaleLowerCase("uk")}`;
+}
+
+function intersectPrices(a: string[], b: string[]): string[] {
+  const keys = new Set(a.map(priceKey));
+  return unique(
+    b.filter((value) => keys.has(priceKey(value))),
+    Number.POSITIVE_INFINITY,
+  );
+}
+
+function samePriceKeys(a: string[], b: string[]): boolean {
+  const aKeys = new Set(a.map(priceKey));
+  const bKeys = new Set(b.map(priceKey));
+  if (aKeys.size !== bKeys.size) return false;
+  for (const key of aKeys) {
+    if (!bKeys.has(key)) return false;
+  }
+  return true;
+}
+
+/**
+ * Один товар на кожен колір групи.
+ *
+ * В групі може бути багато розмірів одного кольору — для порівняння
+ * достатньо однієї картки. Без кольору групуємо за назвою.
+ */
+export function uniqueColorProducts(
+  products: ComparisonProduct[],
+): ComparisonProduct[] {
+  const groups = new Map<string, ComparisonProduct[]>();
+
+  for (const product of products) {
+    const color = product.color?.trim().toLocaleLowerCase("uk");
+    const key = color
+      ? `color:${color}`
+      : `title:${product.title.trim().toLocaleLowerCase("uk")}`;
+    const group = groups.get(key);
+    if (group) group.push(product);
+    else groups.set(key, [product]);
+  }
+
+  return [...groups.values()].map(
+    (group) =>
+      group.find((product) => product.images.length > 0 && product.price) ??
+      group.find((product) => product.images.length > 0) ??
+      group[0],
+  );
+}
+
 function sideFor(
   group: Group,
   products: Map<number, Product>,
@@ -74,23 +141,7 @@ function sideFor(
     .map((id) => products.get(id))
     .filter((product): product is Product => product !== undefined);
 
-  const samples = unique(
-    values.map((product) => product.goodsTitle),
-    MAX_SAMPLES,
-  );
-  const images: string[] = [];
-  const seenImages = new Set<string>();
-  for (const product of values) {
-    for (const image of product.imageUrls) {
-      const url = image.trim();
-      if (!url || seenImages.has(url)) continue;
-      seenImages.add(url);
-      images.push(url);
-      if (images.length >= MAX_IMAGES) break;
-    }
-    if (images.length >= MAX_IMAGES) break;
-  }
-
+  const sortedProducts = sortGroupProducts(values);
   const articles = unique(values.map((product) => product.goodsArticle));
   const articleKeys = new Set(
     articles.map((value) => value.toLocaleLowerCase("uk")),
@@ -113,8 +164,18 @@ function sideFor(
     mdgs: unique(values.map((product) => product.mdg)),
     sizes: unique(values.map((product) => product.size)),
     colors: unique(values.map((product) => product.color)),
-    images,
-    sampleTitles: samples,
+    prices: unique(
+      values.map((product) => product.goodsPrice),
+      Number.POSITIVE_INFINITY,
+    ),
+    products: sortedProducts.map((product) => ({
+      id: product.id,
+      title: product.goodsTitle,
+      price: product.goodsPrice?.trim() || null,
+      size: product.size,
+      color: product.color,
+      images: product.imageUrls.filter(Boolean),
+    })),
   };
 }
 
@@ -127,6 +188,7 @@ export function buildGroupComparison(
   const sideA = sideFor(a, products);
   const sideB = sideFor(b, products);
   const articleBases = intersection(sideA.articleBases, sideB.articleBases);
+  const prices = intersectPrices(sideA.prices, sideB.prices);
 
   return {
     a: sideA,
@@ -137,6 +199,7 @@ export function buildGroupComparison(
       articleBases,
       mdgs: intersection(sideA.mdgs, sideB.mdgs),
       category: a.categoryTitle,
+      prices,
     },
     differences: {
       titles: a.title !== b.title,
@@ -152,6 +215,10 @@ export function buildGroupComparison(
         sideA.sizes.length > 0 &&
         sideB.sizes.length > 0 &&
         intersection(sideA.sizes, sideB.sizes).length === 0,
+      prices:
+        sideA.prices.length > 0 &&
+        sideB.prices.length > 0 &&
+        !samePriceKeys(sideA.prices, sideB.prices),
     },
   };
 }

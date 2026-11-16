@@ -73,9 +73,12 @@ export function AppSidebar({
   const [deleteTarget, setDeleteTarget] = useState<Dataset | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draftName, setDraftName] = useState("");
+  const pendingRenameRef = useRef<Dataset | null>(null);
   const cancelEditRef = useRef(false);
   const savingRef = useRef(false);
   const finishedRef = useRef(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const ignoreBlurRef = useRef(false);
 
   const selectDataset = (datasetId: number) => {
     if (datasetId !== activeDatasetId) void switchDataset(datasetId);
@@ -83,10 +86,9 @@ export function AppSidebar({
   };
 
   const startRename = (dataset: Dataset) => {
-    cancelEditRef.current = false;
-    finishedRef.current = false;
-    setEditingId(dataset.id);
-    setDraftName(dataset.name);
+    // Меню спочатку закривається й повертає фокус. Input відкриваємо після
+    // цього, інакше він відразу отримує blur і закривається.
+    pendingRenameRef.current = dataset;
   };
 
   const saveRename = async () => {
@@ -177,10 +179,20 @@ export function AppSidebar({
                     {editing ? (
                       <div className="flex flex-col gap-1 p-2">
                         <Input
+                          ref={inputRef}
                           value={draftName}
                           autoFocus
                           onChange={(event) => setDraftName(event.target.value)}
-                          onBlur={() => void saveRename()}
+                          onBlur={() => {
+                            if (ignoreBlurRef.current) {
+                              ignoreBlurRef.current = false;
+                              window.requestAnimationFrame(() =>
+                                inputRef.current?.focus(),
+                              );
+                              return;
+                            }
+                            void saveRename();
+                          }}
                           onKeyDown={(event) => {
                             if (event.key === "Enter") {
                               event.preventDefault();
@@ -228,7 +240,23 @@ export function AppSidebar({
                           </span>
                         </button>
 
-                        <DropdownMenu>
+                        <DropdownMenu
+                          onOpenChangeComplete={(nextOpen) => {
+                            const pending = pendingRenameRef.current;
+                            if (nextOpen || !pending) return;
+                            pendingRenameRef.current = null;
+                            cancelEditRef.current = false;
+                            finishedRef.current = false;
+                            // Сразу после закрытия меню фокус возвращается на
+                            // кнопку. Игнорируем этот blur и возвращаем input.
+                            ignoreBlurRef.current = true;
+                            window.setTimeout(() => {
+                              ignoreBlurRef.current = false;
+                            }, 300);
+                            setEditingId(pending.id);
+                            setDraftName(pending.name);
+                          }}
+                        >
                           <DropdownMenuTrigger
                             render={
                               <Button

@@ -41,8 +41,10 @@ import {
   fetchCleanupStatus,
 } from "@/lib/llm/client";
 import {
+  finalizeCleanTitle,
   normalizeTitleAfterLlm,
   normalizeTitleBeforeLlm,
+  LEGACY_CLEANUP_PROMPT_VERSIONS,
   type CleanTitleInput,
   type CleanTitleResult,
 } from "@/lib/llm/title-cleanup";
@@ -1674,21 +1676,59 @@ export const useAppStore = create<AppState>()(
         let costUsd = 0;
         const results = new Map<string, CleanTitleResult>();
         const uncached: CleanTitleInput[] = [];
+        const promptVersions = [
+          status.promptVersion,
+          ...LEGACY_CLEANUP_PROMPT_VERSIONS,
+        ];
+
         for (const input of inputs) {
-          const cached = await getLlmCache(
-            cleanupCacheKey(input, status.model, status.promptVersion),
-          );
-          if (cached) {
-            results.set(input.id, {
-              id: input.id,
-              title: cached.cleanedTitle,
-              originalTitle: input.title,
-              removed: cached.removed,
-              color: cached.color,
-              confidence: cached.confidence,
-            });
-          } else {
+          let cached: Awaited<ReturnType<typeof getLlmCache>> | undefined;
+          let cachedVersion: string | null = null;
+          for (const version of promptVersions) {
+            cached = await getLlmCache(
+              cleanupCacheKey(input, status.model, version),
+            );
+            if (cached) {
+              cachedVersion = version;
+              break;
+            }
+          }
+
+          if (!cached) {
             uncached.push(input);
+            continue;
+          }
+
+          // Старый кэш мог сохранить название с цветом. Дочищаем локально,
+          // без повторного запроса к LLM.
+          const finalized = finalizeCleanTitle(cached.cleanedTitle, input);
+          const removed = [
+            ...new Set([...cached.removed, ...finalized.removed]),
+          ];
+          const color = finalized.color ?? cached.color;
+
+          results.set(input.id, {
+            id: input.id,
+            title: finalized.title,
+            originalTitle: input.title,
+            removed,
+            color,
+            confidence: cached.confidence,
+          });
+
+          if (
+            cachedVersion !== status.promptVersion ||
+            finalized.title !== cached.cleanedTitle
+          ) {
+            await putLlmCache({
+              ...cached,
+              key: cleanupCacheKey(input, status.model, status.promptVersion),
+              cleanedTitle: finalized.title,
+              removed,
+              color,
+              promptVersion: status.promptVersion,
+              createdAt: Date.now(),
+            });
           }
         }
 

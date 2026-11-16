@@ -80,8 +80,11 @@ export const GroupSection = memo(function GroupSection({
   const [isDragOver, setIsDragOver] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(group.title);
+  const pendingRenameRef = useRef(false);
   const cancelEditRef = useRef(false);
   const savingRef = useRef(false);
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
+  const ignoreBlurRef = useRef(false);
 
   // Синхронизация названия, если группа изменилась снаружи.
   const [prevTitle, setPrevTitle] = useState(group.title);
@@ -223,7 +226,7 @@ export const GroupSection = memo(function GroupSection({
     >
       <Card
         size="sm"
-        className={`gap-0 py-0 transition-colors ${
+        className={`gap-0 bg-background py-0 transition-colors ${
           isDragOver ? "bg-accent/30 ring-2 ring-foreground/30" : ""
         }`}
       >
@@ -266,10 +269,20 @@ export const GroupSection = memo(function GroupSection({
 
               {isEditing ? (
                 <Input
+                  ref={titleInputRef}
                   value={draftTitle}
                   autoFocus
                   onChange={(event) => setDraftTitle(event.target.value)}
-                  onBlur={() => void saveTitle()}
+                  onBlur={() => {
+                    if (ignoreBlurRef.current) {
+                      ignoreBlurRef.current = false;
+                      window.requestAnimationFrame(() =>
+                        titleInputRef.current?.focus(),
+                      );
+                      return;
+                    }
+                    void saveTitle();
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();
@@ -327,7 +340,17 @@ export const GroupSection = memo(function GroupSection({
               />
             </div>
 
-            <DropdownMenu>
+            <DropdownMenu
+              onOpenChangeComplete={(nextOpen) => {
+                if (nextOpen || !pendingRenameRef.current) return;
+                pendingRenameRef.current = false;
+                ignoreBlurRef.current = true;
+                window.setTimeout(() => {
+                  ignoreBlurRef.current = false;
+                }, 300);
+                setIsEditing(true);
+              }}
+            >
               <DropdownMenuTrigger
                 render={
                   <Button
@@ -341,7 +364,11 @@ export const GroupSection = memo(function GroupSection({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      pendingRenameRef.current = true;
+                    }}
+                  >
                     <HugeiconsIcon icon={Edit02Icon} data-icon="inline-start" />
                     Перейменувати
                   </DropdownMenuItem>

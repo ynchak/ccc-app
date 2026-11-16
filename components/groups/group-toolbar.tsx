@@ -143,7 +143,11 @@ export function GroupHeaderControls({
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
-      <div className="relative min-w-48 flex-1">
+      <div
+        className={`relative flex-1 ${
+          suggestionCount > 0 ? "min-w-24 max-w-40" : "min-w-48"
+        }`}
+      >
         <HugeiconsIcon
           icon={Search01Icon}
           className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
@@ -176,7 +180,11 @@ export function GroupHeaderControls({
               onSearchChange("");
             }
           }}
-          placeholder="Пошук за назвою, артикулом або id…"
+          placeholder={
+            suggestionCount > 0
+              ? "Пошук…"
+              : "Пошук за назвою, артикулом або id…"
+          }
           className={search ? "pr-8 pl-8" : "pl-8"}
         />
         {search ? (
@@ -319,10 +327,17 @@ export function GroupHeaderControls({
           variant="secondary"
           size="sm"
           onClick={onOpenSuggestions}
-          title="Перевірити можливі об’єднання за моделлю"
+          aria-label={`Пропозиції: ${suggestionCount}`}
+          title={`Пропозиції: ${suggestionCount}. Перевірити можливі об’єднання за моделлю`}
+          className="border-amber-500/40 bg-amber-500/10 text-amber-800 shadow-[0_0_0_1px_rgba(245,158,11,0.08)] hover:bg-amber-500/20 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-200 dark:hover:bg-amber-400/20"
         >
-          <HugeiconsIcon icon={GroupLayersIcon} data-icon="inline-start" />
-          Пропозиції: {suggestionCount}
+          <HugeiconsIcon
+            icon={GroupLayersIcon}
+            data-icon="inline-start"
+            className="text-amber-600 dark:text-amber-300"
+          />
+          <span className="hidden 2xl:inline">Пропозиції: </span>
+          {suggestionCount}
         </Button>
       ) : null}
 

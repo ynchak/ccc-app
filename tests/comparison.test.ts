@@ -4,6 +4,7 @@ import { test } from "node:test";
 import {
   buildGroupComparison,
   hasCommonEvidence,
+  uniqueColorProducts,
 } from "@/lib/jev/comparison";
 import type { Group, Product } from "@/lib/types";
 
@@ -62,6 +63,7 @@ test("порівняння знаходить спільну базу артик
       product(1, {
         goodsTitle: "Куртка Zara 18738 синя",
         goodsArticle: "4302207-navyblue-XXL",
+        goodsPrice: "1299.00",
         size: "XXL",
         color: "Синій",
         imageUrls: ["a", "b", "c", "d"],
@@ -72,6 +74,7 @@ test("порівняння знаходить спільну базу артик
       product(2, {
         goodsTitle: "Куртка Zara 18738 синя 2",
         goodsArticle: "4302207-navyblue-XXL",
+        goodsPrice: "1299.00",
       }),
     ],
     [
@@ -79,6 +82,7 @@ test("порівняння знаходить спільну базу артик
       product(3, {
         goodsTitle: "Куртка Zara 18738 синя 3",
         goodsArticle: "4302207-navyblue-XXL",
+        goodsPrice: "1299.00",
       }),
     ],
     [
@@ -86,6 +90,7 @@ test("порівняння знаходить спільну базу артик
       product(4, {
         goodsTitle: "Куртка Zara 18738 синя 4",
         goodsArticle: "4302207-navyblue-XXL",
+        goodsPrice: "1299.00",
       }),
     ],
     [
@@ -93,6 +98,7 @@ test("порівняння знаходить спільну базу артик
       product(5, {
         goodsTitle: "Куртка Zara 18738 сіра",
         goodsArticle: "4302207-stone-L",
+        goodsPrice: "1299.00",
         size: "L",
         color: "Сірий",
         imageUrls: ["e"],
@@ -108,8 +114,12 @@ test("порівняння знаходить спільну базу артик
   assert.deepEqual(comparison.b.articleBases, ["4302207"]);
   assert.deepEqual(comparison.common.brands, ["Zara"]);
   assert.deepEqual(comparison.common.articleBases, ["4302207"]);
-  assert.equal(comparison.a.images.length, 3);
-  assert.equal(comparison.a.sampleTitles.length, 3);
+  assert.deepEqual(comparison.common.prices, ["1299.00"]);
+  assert.equal(comparison.differences.prices, false);
+  assert.equal(comparison.a.products.length, 4);
+  assert.equal(comparison.b.products.length, 1);
+  assert.equal(comparison.a.products[0]?.price, "1299.00");
+  assert.deepEqual(comparison.a.products[0]?.images, ["a", "b", "c", "d"]);
   assert.equal(comparison.differences.colors, true);
   assert.equal(comparison.differences.sizes, true);
   assert.equal(hasCommonEvidence(comparison), true);
@@ -127,4 +137,83 @@ test("без спільних ознак порівняння це показу�
   );
   assert.equal(hasCommonEvidence(comparison), false);
   assert.deepEqual(comparison.common.articleBases, []);
+});
+
+test("різні ціни груп показуються як відмінність", () => {
+  const products = new Map<number, Product>([
+    [1, product(1, { goodsPrice: "1299.00" })],
+    [2, product(2, { goodsPrice: "1399.00" })],
+  ]);
+  const comparison = buildGroupComparison(
+    group(1, [1]),
+    group(2, [2]),
+    products,
+  );
+
+  assert.deepEqual(comparison.a.prices, ["1299.00"]);
+  assert.deepEqual(comparison.b.prices, ["1399.00"]);
+  assert.deepEqual(comparison.common.prices, []);
+  assert.equal(comparison.differences.prices, true);
+});
+
+test("ціни в різному форматі вважаються однаковими", () => {
+  const products = new Map<number, Product>([
+    [1, product(1, { goodsPrice: "1299.00" })],
+    [2, product(2, { goodsPrice: "1299" })],
+  ]);
+  const comparison = buildGroupComparison(
+    group(1, [1]),
+    group(2, [2]),
+    products,
+  );
+
+  assert.deepEqual(comparison.common.prices, ["1299"]);
+  assert.equal(comparison.differences.prices, false);
+});
+
+test("без цін різниця не показується", () => {
+  const products = new Map<number, Product>([
+    [1, product(1)],
+    [2, product(2)],
+  ]);
+  const comparison = buildGroupComparison(
+    group(1, [1]),
+    group(2, [2]),
+    products,
+  );
+
+  assert.deepEqual(comparison.a.prices, []);
+  assert.deepEqual(comparison.b.prices, []);
+  assert.deepEqual(comparison.common.prices, []);
+  assert.equal(comparison.differences.prices, false);
+});
+
+test("для порівняння береться один товар на кожен колір", () => {
+  const whiteTitle = "Білий лонгслив";
+  const products = new Map<number, Product>([
+    [1, product(1, { goodsTitle: whiteTitle, color: "Білий", imageUrls: ["a"], goodsPrice: "100" })],
+    [2, product(2, { goodsTitle: whiteTitle, color: "Білий", goodsPrice: "100" })],
+    [3, product(3, { goodsTitle: whiteTitle, color: "Білий", imageUrls: ["c"], goodsPrice: "100" })],
+    [4, product(4, { goodsTitle: "Чорний лонгслив", color: "Чорний", imageUrls: ["d"], goodsPrice: "200" })],
+    [5, product(5, { goodsTitle: "Товар без кольору", imageUrls: ["e"] })],
+    [6, product(6, { goodsTitle: "Товар без кольору", imageUrls: ["f"] })],
+    [7, product(7, { goodsTitle: "Інший товар", imageUrls: ["g"] })],
+    [8, product(8, { goodsTitle: "Друга група" })],
+  ]);
+
+  const comparison = buildGroupComparison(
+    group(1, [1, 2, 3, 4, 5, 6, 7]),
+    group(2, [8]),
+    products,
+  );
+  const preview = uniqueColorProducts(comparison.a.products);
+
+  assert.equal(preview.length, 4);
+  assert.equal(preview.filter((item) => item.color === "Білий").length, 1);
+  assert.equal(preview.filter((item) => item.color === "Чорний").length, 1);
+  assert.equal(preview.filter((item) => !item.color).length, 2);
+  assert.equal(
+    preview.find((item) => item.color === "Білий")?.id,
+    1,
+  );
 });

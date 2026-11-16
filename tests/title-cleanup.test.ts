@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import {
   applyModelResults,
+  finalizeCleanTitle,
   normalizeTitleAfterLlm,
   normalizeTitleBeforeLlm,
   tokenizeTitle,
@@ -153,19 +154,110 @@ test("после удаления цвета в начале название н
   );
 });
 
-test("низкая уверенность не мешает детерминированному удалению размера", () => {
+test("английский цвет удаляется, даже если LLM пометила его моделью", () => {
+  const input: CleanTitleInput = {
+    id: "converse",
+    title:
+      "Кеды женские Converse Chuck Taylor LO Pro Lacey Lace Black Vintage черные 41 (A20655C)",
+    brand: "Converse",
+    article: "A20655C",
+    size: "41",
+    color: "Черный",
+    category: "Кеды женские",
+  };
+  // Модель ошибочно считает Black частью названия модели.
+  const [result] = applyModelResults(
+    [input],
+    [model(input, { 9: "model", 11: "color", 12: "size" })],
+  );
+  assert.equal(
+    result.title,
+    "Кеды женские Converse Chuck Taylor LO Pro Lacey Lace Vintage (A20655C)",
+  );
+  assert.deepEqual(result.removed, ["Black", "черные", "41"]);
+  assert.equal(result.color, "black");
+});
+
+test("английский цвет удаляется при пустом поле цвета", () => {
+  const input: CleanTitleInput = {
+    id: "english-color",
+    title: "Кроссовки Nike Air Max 90 Black 42 (DX1234)",
+    brand: "Nike",
+    article: "DX1234",
+    size: "42",
+  };
+  const [result] = applyModelResults(
+    [input],
+    [model(input, { 5: "model", 6: "size" })],
+  );
+  assert.equal(
+    result.title,
+    "Кроссовки Nike Air Max 90 (DX1234)",
+  );
+  assert.deepEqual(result.removed, ["Black", "42"]);
+  assert.equal(result.color, "black");
+});
+
+test("цвет в бренде не удаляется", () => {
+  const input: CleanTitleInput = {
+    id: "brand-color",
+    title: "Куртка Black Label 42 (BL123)",
+    brand: "Black Label",
+    article: "BL123",
+    size: "42",
+    color: "Черный",
+  };
+  const [result] = applyModelResults(
+    [input],
+    [model(input, { 1: "brand", 2: "brand", 3: "size" })],
+  );
+  assert.equal(result.title, "Куртка Black Label (BL123)");
+  assert.ok(!result.removed.includes("Black"));
+});
+
+test("цвет в артикуле не удаляется", () => {
+  const input: CleanTitleInput = {
+    id: "article-color",
+    title: "Кроссовки Black 42 (Black)",
+    article: "Black",
+    size: "42",
+    color: "Черный",
+  };
+  const [result] = applyModelResults([input], []);
+  assert.equal(result.title, "Кроссовки Black (Black)");
+  assert.ok(!result.removed.includes("Black"));
+});
+
+test("кэшированное название дочищается от цвета", () => {
+  const result = finalizeCleanTitle(
+    "Кеды женские Converse Chuck Taylor LO Pro Lacey Lace Black Vintage (A20655C)",
+    {
+      brand: "Converse",
+      article: "A20655C",
+      color: "Черный",
+    },
+  );
+  assert.equal(
+    result.title,
+    "Кеды женские Converse Chuck Taylor LO Pro Lacey Lace Vintage (A20655C)",
+  );
+  assert.deepEqual(result.removed, ["Black"]);
+  assert.equal(result.color, "black");
+});
+
+test("низкая уверенность не мешает детерминированному удалению цвета и размера", () => {
   const [result] = applyModelResults(
     [base],
     [model(base, { 1: "color", 9: "size" }, 0.2)],
   );
   assert.equal(
     result.title,
-    "Женское серое худи New Balance Trackside Fleece Full Zip 34 (WJ62P2UPOFG)",
+    "Женское худи New Balance Trackside Fleece Full Zip 34 (WJ62P2UPOFG)",
   );
-  assert.deepEqual(result.removed, ["(XS)"]);
+  assert.deepEqual(result.removed, ["серое", "(XS)"]);
 });
 
-test("неполная разметка не применяется, но размер из данных удаляется", () => {
+test("неполная разметка не применяется, но цвет и размер из данных удаляются", () => {
   const incomplete: ModelTitleResult = {
     id: base.id,
     labels: ["color"],
@@ -174,9 +266,9 @@ test("неполная разметка не применяется, но раз
   const [result] = applyModelResults([base], [incomplete]);
   assert.equal(
     result.title,
-    "Женское серое худи New Balance Trackside Fleece Full Zip 34 (WJ62P2UPOFG)",
+    "Женское худи New Balance Trackside Fleece Full Zip 34 (WJ62P2UPOFG)",
   );
-  assert.deepEqual(result.removed, ["(XS)"]);
+  assert.deepEqual(result.removed, ["серое", "(XS)"]);
 });
 
 test("номер модели перед размером не удаляется даже при ошибке модели", () => {
@@ -191,20 +283,23 @@ test("номер модели перед размером не удаляетс�
   assert.ok(!result.removed.includes("15946"));
 });
 
-test("без модели размер из данных всё равно удаляется", () => {
+test("без модели цвет и размер из данных всё равно удаляются", () => {
   const [result] = applyModelResults([issa], []);
   assert.equal(
     result.title,
-    "Осеннее классическое удлиненное пальто с меховым воротником ISSA PLUS 15946 бежевое (issa2007682874996)",
+    "Осеннее классическое удлиненное пальто с меховым воротником ISSA PLUS 15946 (issa2007682874996)",
   );
-  assert.deepEqual(result.removed, ["40"]);
+  assert.deepEqual(result.removed, ["40", "бежевое"]);
 });
 
-test("при пустом size дополнительно ничего не удаляется", () => {
+test("при пустом size цвет удаляется, а размер остаётся", () => {
   const withoutSize: CleanTitleInput = { ...issa, size: undefined };
   const [result] = applyModelResults([withoutSize], []);
-  assert.equal(result.title, withoutSize.title);
-  assert.deepEqual(result.removed, []);
+  assert.equal(
+    result.title,
+    "Осеннее классическое удлиненное пальто с меховым воротником ISSA PLUS 15946 40 (issa2007682874996)",
+  );
+  assert.deepEqual(result.removed, ["бежевое"]);
 });
 
 test("«см» удаляется вместе с соседним размером", () => {

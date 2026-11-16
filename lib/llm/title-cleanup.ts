@@ -6,6 +6,11 @@
  */
 
 import {
+  colorIdsForWord,
+  findColorIndexes,
+  isColorModifier,
+} from "@/lib/grouping/color-lexicon";
+import {
   capitalizeTitle,
   unescapeTitle,
 } from "@/lib/grouping/title-text";
@@ -46,7 +51,17 @@ export interface CleanTitleResult {
   confidence: number;
 }
 
-export const CLEANUP_PROMPT_VERSION = "clean-color-size-height-v4";
+export const CLEANUP_PROMPT_VERSION = "clean-color-size-height-v5";
+
+/**
+ * Старые версии промпта, кэш которых можно переиспользовать.
+ *
+ * Результат перед применением всё равно проходит детерминированную дочистку
+ * цвета, поэтому старые записи безопасны и не требуют повторного запроса к LLM.
+ */
+export const LEGACY_CLEANUP_PROMPT_VERSIONS = [
+  "clean-color-size-height-v4",
+];
 
 const REMOVABLE_LABELS = new Set<TitleLabel>(["color", "size", "height"]);
 
@@ -135,6 +150,115 @@ function findSizeAnchor(tokens: string[], size?: string): number | null {
   return null;
 }
 
+/**
+ * Индексы цвета и соседних модификаторов.
+ *
+ * Цвет определяется словарём, а не только разметкой модели. Бренд и артикул
+ * остаются защищёнными: «Black» в бренде Black Label не удаляется.
+ */
+function collectColorIndexes(
+  tokens: string[],
+  input: Pick<CleanTitleInput, "brand" | "article" | "color">,
+): Set<number> {
+  const detected = findColorIndexes(tokens, input.color);
+  const indexes = new Set<number>();
+
+  const add = (index: number) => {
+    const token = tokens[index];
+    if (brandProtected(token, input.brand)) return;
+    if (articleProtected(token, input.article)) return;
+    indexes.add(index);
+  };
+
+  for (const index of detected) {
+    add(index);
+
+    let left = index - 1;
+    while (left >= 0 && isColorModifier(tokens[left])) {
+      add(left);
+      left--;
+    }
+
+    let right = index + 1;
+    while (right < tokens.length && isColorModifier(tokens[right])) {
+      add(right);
+      right++;
+    }
+  }
+
+  return indexes;
+}
+
+/** Названия цветов для результата очистки, без повторов одного цвета. */
+function collectColorNames(
+  tokens: string[],
+  indexes: Set<number>,
+): string | undefined {
+  const names: string[] = [];
+  const seenIds = new Set<string>();
+  const seenWords = new Set<string>();
+
+  for (const index of [...indexes].sort((a, b) => a - b)) {
+    const token = tokens[index];
+    const normalized = normalizeToken(token);
+    if (!normalized) continue;
+
+    const ids = colorIdsForWord(token);
+    if (ids.length > 0) {
+      if (ids.some((id) => seenIds.has(id))) continue;
+      for (const id of ids) seenIds.add(id);
+    } else {
+      if (seenWords.has(normalized)) continue;
+      seenWords.add(normalized);
+    }
+
+    names.push(normalized);
+  }
+
+  return names.length > 0 ? names.join(" ") : undefined;
+}
+
+/** Результат дочистки готового названия. */
+export interface FinalizeCleanTitleResult {
+  title: string;
+  removed: string[];
+  color?: string;
+}
+
+/**
+ * Дочищает готовое название от цветов.
+ *
+ * Используется для результатов из кэша: они могли быть получены старой
+ * версией промпта, когда цвет остался в названии.
+ */
+export function finalizeCleanTitle(
+  title: string,
+  input: Pick<CleanTitleInput, "brand" | "article" | "color">,
+): FinalizeCleanTitleResult {
+  const tokens = tokenizeTitle(title);
+  const colorIndexes = collectColorIndexes(tokens, input);
+  if (colorIndexes.size === 0) return { title, removed: [] };
+
+  const removedTokens = tokens.filter((_, index) => colorIndexes.has(index));
+  const cleaned = normalizeTitleAfterLlm(
+    tokens
+      .filter((_, index) => !colorIndexes.has(index))
+      .join(" "),
+  );
+  const safeCleaned =
+    cleaned.length >= 2 && /[\p{L}\p{N}]/u.test(cleaned)
+      ? cleaned
+      : title;
+
+  if (safeCleaned === title) return { title, removed: [] };
+
+  return {
+    title: safeCleaned,
+    removed: removedTokens,
+    color: collectColorNames(tokens, colorIndexes),
+  };
+}
+
 const OPEN_BRACKETS = new Map([
   ["(", ")"],
   ["[", "]"],
@@ -210,7 +334,7 @@ export function applyModelResults(
         : null;
     const sizeAnchor = findSizeAnchor(tokens, input.size);
     const remove = new Set<number>();
-    const colors: string[] = [];
+    const colorIndexes = new Set<number>();
 
     if (labels) {
       labels.forEach((rawLabel, index) => {
@@ -221,7 +345,7 @@ export function applyModelResults(
         const token = tokens[index];
         if (brandProtected(token, input.brand)) return;
         if (articleProtected(token, input.article)) return;
-        if (rawLabel === "color") colors.push(normalizeToken(token));
+        if (rawLabel === "color") colorIndexes.add(index);
 
         // Числа до найденного размера — это, скорее всего, номер модели.
         // Для буквенного размера разрешаем одно число непосредственно перед ним.
@@ -237,6 +361,13 @@ export function applyModelResults(
 
         remove.add(index);
       });
+    }
+
+    // Цвет удаляем детерминированно, как размер: модель может ошибиться и
+    // посчитать «Black» частью названия модели рядом со словом Vintage.
+    for (const index of collectColorIndexes(tokens, input)) {
+      colorIndexes.add(index);
+      remove.add(index);
     }
 
     // Если в данных есть размер, удаляем его даже при неполной разметке модели.
@@ -266,7 +397,7 @@ export function applyModelResults(
       title: safeCleaned,
       originalTitle: input.title,
       removed: safeCleaned === input.title ? [] : removedTokens,
-      color: colors.length > 0 ? colors.join(" ") : undefined,
+      color: collectColorNames(tokens, colorIndexes),
       confidence: modelResult?.confidence ?? 0,
     };
   });
@@ -280,7 +411,7 @@ export function buildCleanupMessages(inputs: CleanTitleInput[]) {
       content:
         "Ты размечаешь токены в названиях групп товаров. Тебе дают JSON-массив групп: id, title, tokens, а также brand, article, size, color, height, category. Поля-подсказки могут быть пустыми — это нормально.\n\n" +
         "Верни для каждой группы массив labels строго той же длины, что и tokens, в том же порядке. Каждый элемент — одна метка: color, size, height, article, brand, model или other.\n\n" +
-        "color — слово или словосочетание, обозначающее цвет: простой, составной через дефис, составной через пробел, с модификаторами вроде «светло», «тёмно», «очень тёмный». Удаляется.\n\n" +
+        "color — слово или словосочетание, обозначающее цвет: простой, составной через дефис, составной через пробел, с модификаторами вроде «светло», «тёмно», «очень тёмный». Удаляется. Английские названия цветов (black, white, beige, grey/gray, brown, red, pink, purple, blue, green, yellow, orange, navy, khaki, burgundy, mint, olive, cream и подобные) — тоже color, даже если рядом стоят слова модели: Vintage, Lace, Pro, Classic, Retro. Например, в «Кеды женские Converse Chuck Taylor LO Pro Lacey Lace Black Vintage черные 41 (A20655C)» слово Black — color, а Vintage — model/other. Поле color может быть на другом языке: если color = «Черный», а в title есть Black, это color. Удаляй все найденные в title цвета, даже если они не совпадают с полем color.\n\n" +
         "size — любое обозначение размера: XS, S, M, L, XL, XXL, 2XL, 3XL, 4XL, 5XL, XXXL, числовые размеры, размеры в скобках, несколько токенов размера подряд. Удаляется.\n\n" +
         "height — число или диапазон, обозначающий рост: 98, 102, 110-112, 110–112, 108 см. Это не номер модели и не размер одежды. Удаляется.\n\n" +
         "article — артикул или код варианта. Он не обязан быть в скобках, может быть числовым, буквенным или смешанным, может содержать дефисы. Не удаляется.\n\n" +
