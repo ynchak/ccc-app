@@ -366,14 +366,14 @@ export function ImportDialog({
                 стануть окремими групами.
               </div>
             ) : preview.noPhotoPercent > 0 ? (
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+              <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-sm text-foreground">
                 У {Math.round(preview.noPhotoPercent)}% товарів немає придатних
                 фото. Перевірте, чи це очікувано.
               </div>
             ) : null}
 
             {preview.invalidPhotoUrls > 0 ? (
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+              <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-sm text-foreground">
                 Знайдено некоректні посилання на фото:{" "}
                 {preview.invalidPhotoUrls}. Такі товари можуть стати окремими
                 групами.

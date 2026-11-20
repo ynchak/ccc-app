@@ -7,11 +7,11 @@ export function BrandMark({ className }: { className?: string }) {
       focusable="false"
       className={className}
     >
-      <rect width="64" height="64" rx="15" fill="#241a10" />
+      <rect width="64" height="64" rx="15" fill="#1f1a12" />
       <path
         d="M18 47 32 17l14 30"
         fill="none"
-        stroke="#F4EAD9"
+        stroke="#F1EEE7"
         strokeWidth="6"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -19,7 +19,7 @@ export function BrandMark({ className }: { className?: string }) {
       <path
         d="M24 37h16"
         fill="none"
-        stroke="#E0A85A"
+        stroke="#D2A65F"
         strokeWidth="6"
         strokeLinecap="round"
       />

@@ -329,12 +329,12 @@ export function GroupHeaderControls({
           onClick={onOpenSuggestions}
           aria-label={`Пропозиції: ${suggestionCount}`}
           title={`Пропозиції: ${suggestionCount}. Перевірити можливі об’єднання за моделлю`}
-          className="border-amber-500/40 bg-amber-500/10 text-amber-800 shadow-[0_0_0_1px_rgba(245,158,11,0.08)] hover:bg-amber-500/20 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-200 dark:hover:bg-amber-400/20"
+          className="border-primary/30 bg-primary/10 text-foreground hover:bg-primary/15 dark:border-primary/30 dark:bg-primary/15 dark:text-foreground dark:hover:bg-primary/20"
         >
           <HugeiconsIcon
             icon={GroupLayersIcon}
             data-icon="inline-start"
-            className="text-amber-600 dark:text-amber-300"
+            className="text-primary"
           />
           <span className="hidden 2xl:inline">Пропозиції: </span>
           {suggestionCount}

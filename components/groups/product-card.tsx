@@ -261,7 +261,7 @@ export const ProductCard = memo(function ProductCard({
         ) : null}
 
         {images.length === 0 ? (
-          <span className="absolute right-2 bottom-2 z-10 rounded bg-amber-500/90 px-1.5 py-0.5 text-[10px] font-medium text-white">
+          <span className="absolute right-2 bottom-2 z-10 rounded bg-primary/90 px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
             немає фото
           </span>
         ) : null}
@@ -359,7 +359,7 @@ export const ProductCard = memo(function ProductCard({
                 {product.colorSource === "suggested" ? (
                   <Badge
                     variant="outline"
-                    className="h-4 shrink-0 border-amber-500/30 bg-amber-500/10 px-1 text-[9px] text-amber-700 dark:text-amber-300"
+                    className="h-4 shrink-0 border-primary/30 bg-primary/10 px-1 text-[9px] text-foreground"
                     title="Колір запропоновано сервісом"
                   >
                     ШІ

@@ -52,7 +52,7 @@ function Field({
         {suggested ? (
           <Badge
             variant="outline"
-            className="h-4 shrink-0 border-amber-500/30 bg-amber-500/10 px-1 text-[9px] text-amber-700 dark:text-amber-300"
+            className="h-4 shrink-0 border-primary/30 bg-primary/10 px-1 text-[9px] text-foreground"
             title="Колір запропоновано сервісом"
           >
             ШІ

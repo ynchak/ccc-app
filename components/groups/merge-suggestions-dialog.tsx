@@ -211,7 +211,7 @@ function GroupSide({ side }: { side: ComparisonSide }) {
             <span>{productsLabel(side.count)}</span>
             <span className="font-medium text-foreground">{priceText}</span>
             {summary.missing > 0 && summary.values.length > 0 ? (
-              <span className="text-amber-600 dark:text-amber-400">
+              <span className="text-primary">
                 без ціни: {summary.missing}
               </span>
             ) : null}
