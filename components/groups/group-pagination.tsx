@@ -33,6 +33,7 @@ export function GroupPagination({
   totalItems,
   pageSize,
   showPageSize = true,
+  itemsLabel = "Групи",
   onPageChange,
   onPageSizeChange,
 }: {
@@ -43,6 +44,7 @@ export function GroupPagination({
   totalItems: number;
   pageSize: PageSize;
   showPageSize?: boolean;
+  itemsLabel?: string;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: PageSize) => void;
 }) {
@@ -51,7 +53,7 @@ export function GroupPagination({
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b py-2 text-sm">
       <span className="text-muted-foreground">
-        Групи {start}–{end} з {totalItems}
+        {itemsLabel} {start}–{end} з {totalItems}
       </span>
 
       {showPageSize ? (

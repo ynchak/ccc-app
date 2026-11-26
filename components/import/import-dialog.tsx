@@ -1,11 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   CheckmarkCircle02Icon,
   FileImportIcon,
   Loading03Icon,
+  TagsIcon,
 } from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
@@ -495,6 +497,14 @@ export function ImportDialog({
                 }}
               />
             </div>
+
+            <Link
+              href="/categories"
+              className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/40 hover:text-foreground"
+            >
+              <HugeiconsIcon icon={TagsIcon} className="size-3.5" />
+              Спочатку виправити категорії
+            </Link>
 
             {error ? (
               <div className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">

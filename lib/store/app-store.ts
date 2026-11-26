@@ -812,7 +812,11 @@ export const useAppStore = create<AppState>()(
     lastSavedAt: null,
 
     async init() {
-      const datasets = await loadDatasets();
+      // Файлы этапа категорий живут в отдельном разделе и не должны
+      // появляться в списке группировки.
+      const datasets = (await loadDatasets()).filter(
+        (dataset) => dataset.stage !== "categories",
+      );
       set({ datasets });
 
       if (datasets.length === 0) return;

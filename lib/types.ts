@@ -17,8 +17,12 @@ export interface Product {
   /** Цена из файла (GOODS_PRICE). В старых файлах может отсутствовать. */
   goodsPrice?: string;
   producersTitle: string;
+  /** Текущая категория. В потоке Categories после перехода совпадает с целевой. */
   categoryId: string;
   categoryTitle: string;
+  /** Исходная категория из файла — не меняется при разнесении по категориям. */
+  originalCategoryId?: string;
+  originalCategoryTitle?: string;
   sellerTitle: string;
   gomerSyncSourceId: string;
 
@@ -64,6 +68,18 @@ export interface Group {
   manual?: boolean;
 }
 
+/** Этап обработки файла. */
+export type DatasetStage = "categories" | "grouping";
+
+/** Откуда пришёл файл: обычная группировка или поток категорий. */
+export type DatasetFlow = "grouping" | "categories";
+
+/** Категория, добавленная вручную в справочник файла. */
+export interface CategoryRef {
+  id: string;
+  title: string;
+}
+
 /** Импортированный файл. */
 export interface Dataset {
   id: number;
@@ -73,7 +89,7 @@ export interface Dataset {
   groupCount: number;
   /** Сколько групп было слито автоматически по совпадению названий. */
   autoMergedCount: number;
-  /** Суммарная стоимость запросов к ИИ для этого файла, USD. */
+  /** Стоимость запросов к ИИ для этого файла, USD. */
   aiCostUsd?: number;
   /** Сколько раз вручную запускалась очистка названий. */
   aiCleanupRuns?: number;
@@ -81,7 +97,39 @@ export interface Dataset {
   columnMap: ColumnMapping[];
   /** Исходный заголовок файла — для превью и повторного маппинга. */
   header: string[];
+  /** Этап обработки. У старых файлов отсутствует и считается группировкой. */
+  stage?: DatasetStage;
+  /** Поток, в котором создан файл. */
+  flow?: DatasetFlow;
+  /** Файл категорий, из которого собрана группировка. */
+  sourceDatasetId?: number;
+  /** Количество кластеров на этапе категорий. */
+  clusterCount?: number;
+  /** Категории, добавленные вручную поверх категорий из файла. */
+  extraCategories?: CategoryRef[];
 }
+
+/** Кластер товаров на этапе разнесения по категориям. */
+export interface CategoryCluster {
+  id: number;
+  datasetId: number;
+  /** Постоянный номер кластера внутри файла. */
+  number: number;
+  title: string;
+  order: number;
+  productIds: number[];
+  /** Одна категория, выбранная для всей группы. Null — оставить как есть. */
+  targetCategoryId: string | null;
+  targetCategoryTitle: string | null;
+  /** Кластер изменён вручную. */
+  manual?: boolean;
+}
+
+/** Кластер до записи в БД. */
+export type NewCategoryCluster = Omit<
+  CategoryCluster,
+  "id" | "datasetId"
+>;
 
 /** Как поле приложения сопоставлено с колонкой файла. */
 export interface ColumnMapping {

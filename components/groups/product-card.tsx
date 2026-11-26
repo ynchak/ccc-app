@@ -11,6 +11,7 @@ import {
   GripVerticalIcon,
   ImageNotFound01Icon,
   InformationCircleIcon,
+  Link01Icon,
   MoveHorizontalIcon,
   MoreHorizontalIcon,
   UnfoldMoreIcon,
@@ -35,21 +36,55 @@ import { formatPriceUah } from "@/lib/price";
 import { useAppStore } from "@/lib/store/app-store";
 import type { Product } from "@/lib/types";
 
+/** Режим отображения карточки. */
+export type ProductCardMode = "product" | "group" | "embedded" | "preview";
+
 /**
  * Карточка товара: слайдер фото, название и таблица характеристик.
+ *
+ * В режиме `group` карточка представляет группу в потоке категорий:
+ * выбор относится к группе, а клик открывает её товары.
  */
 export const ProductCard = memo(function ProductCard({
   product,
   onMove,
   onDetails,
+  mode = "product",
+  selected: selectedProp,
+  onSelectionChange,
+  onOpenGroup,
+  groupCount,
+  groupCategories,
+  groupMixed = false,
+  groupLinkedCount = 0,
+  groupTransferred = false,
 }: {
   product: Product;
-  onMove: (product: Product) => void;
-  onDetails: (product: Product) => void;
+  onMove?: (product: Product) => void;
+  onDetails?: (product: Product) => void;
+  mode?: ProductCardMode;
+  selected?: boolean;
+  onSelectionChange?: () => void;
+  onOpenGroup?: () => void;
+  groupCount?: number;
+  groupCategories?: { id: string; title: string; count: number }[];
+  groupMixed?: boolean;
+  groupLinkedCount?: number;
+  groupTransferred?: boolean;
 }) {
-  const selected = useAppStore((s) => s.selectedProductIds.has(product.id));
+  const appSelected = useAppStore((s) =>
+    s.selectedProductIds.has(product.id),
+  );
+  const selected = selectedProp ?? appSelected;
   const toggleProductSelection = useAppStore((s) => s.toggleProductSelection);
   const removeProductFromGroup = useAppStore((s) => s.removeProductFromGroup);
+  const isGroup = mode === "group";
+  const isEmbedded = mode === "embedded";
+  const isPreview = mode === "preview";
+  const toggleSelection = () => {
+    if (onSelectionChange) onSelectionChange();
+    else toggleProductSelection(product.id);
+  };
 
   const [imageIndex, setImageIndex] = useState(0);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
@@ -76,6 +111,10 @@ export const ProductCard = memo(function ProductCard({
     : "";
 
   const handleDragStart = (event: DragEvent<HTMLButtonElement>) => {
+    if (isGroup || isEmbedded || isPreview) {
+      event.preventDefault();
+      return;
+    }
     const state = useAppStore.getState();
     const ids =
       selected && state.selectedProductIds.size > 1
@@ -118,7 +157,25 @@ export const ProductCard = memo(function ProductCard({
 
   return (
     <div
-      className={`relative isolate flex flex-col overflow-hidden rounded-xl border bg-card transition-colors ${
+      role={isGroup || isEmbedded ? "button" : undefined}
+      tabIndex={isGroup || isEmbedded ? 0 : undefined}
+      onClick={
+        isGroup
+          ? onOpenGroup
+          : isEmbedded
+            ? toggleSelection
+            : undefined
+      }
+      onKeyDown={(event) => {
+        if (!isGroup && !isEmbedded) return;
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        if (isGroup) onOpenGroup?.();
+        else toggleSelection();
+      }}
+      className={`relative isolate flex flex-col overflow-hidden rounded-xl border bg-card text-left transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${
+        isGroup || isEmbedded ? "cursor-pointer" : ""
+      } ${
         selected
           ? "border-foreground/30 ring-2 ring-foreground/10"
           : "border-border hover:border-foreground/20"
@@ -132,10 +189,17 @@ export const ProductCard = memo(function ProductCard({
         <button
           type="button"
           className="absolute inset-0 flex cursor-zoom-in items-center justify-center p-0 disabled:cursor-default"
-          onClick={() => setLightboxOpen(true)}
+          onClick={(event) => {
+            event.stopPropagation();
+            if (isGroup && onOpenGroup) {
+              onOpenGroup();
+              return;
+            }
+            setLightboxOpen(true);
+          }}
           disabled={!currentImage || imageFailed}
-          aria-label="Збільшити фото"
-          title="Натисніть, щоб збільшити"
+          aria-label={isGroup ? "Відкрити групу" : "Збільшити фото"}
+          title={isGroup ? "Відкрити групу" : "Натисніть, щоб збільшити"}
         >
           {currentImage && !imageFailed ? (
             <span className="relative block h-full w-full">
@@ -161,77 +225,110 @@ export const ProductCard = memo(function ProductCard({
         </button>
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between p-2">
-          <div className="pointer-events-auto rounded-md bg-background/95 p-1">
-            <Checkbox
-              checked={selected}
-              onCheckedChange={() => toggleProductSelection(product.id)}
-              aria-label={`Вибрати товар ${product.goodsTitle}`}
-            />
-          </div>
-
-          <div className="pointer-events-auto flex items-center gap-1">
-            <button
-              type="button"
-              className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-md bg-background/95 text-muted-foreground hover:text-foreground active:cursor-grabbing"
-              draggable
-              onDragStart={handleDragStart}
-              aria-label="Перетягнути товар"
-              title="Перетягніть товар до іншої групи"
+          {!isPreview ? (
+            <div
+              className="pointer-events-auto rounded-md bg-background/95 p-1"
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
             >
-              <HugeiconsIcon icon={GripVerticalIcon} className="size-4" />
-            </button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="secondary"
-                    size="icon-sm"
-                    className="bg-background/95"
-                    aria-label="Дії з товаром"
-                  />
+              <Checkbox
+                checked={selected}
+                onCheckedChange={toggleSelection}
+                aria-label={
+                  isGroup
+                    ? `Вибрати групу ${product.goodsTitle}`
+                    : `Вибрати товар ${product.goodsTitle}`
                 }
-              >
-                <HugeiconsIcon icon={MoreHorizontalIcon} />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => onDetails(product)}>
-                    <HugeiconsIcon
-                      icon={InformationCircleIcon}
-                      data-icon="inline-start"
-                    />
-                    Деталі
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onMove(product)}>
-                    <HugeiconsIcon
-                      icon={MoveHorizontalIcon}
-                      data-icon="inline-start"
-                    />
-                    Перемістити до групи…
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => void removeProductFromGroup(product.id)}
-                  >
-                    <HugeiconsIcon
-                      icon={UnfoldMoreIcon}
-                      data-icon="inline-start"
-                    />
-                    Винести в окрему групу
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => toggleProductSelection(product.id)}
+              />
+            </div>
+          ) : (
+            <span />
+          )}
+
+          <div
+            className="pointer-events-auto flex items-center gap-1"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            {mode === "product" ? (
+              <>
+                <button
+                  type="button"
+                  className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-md bg-background/95 text-muted-foreground hover:text-foreground active:cursor-grabbing"
+                  draggable
+                  onDragStart={handleDragStart}
+                  aria-label="Перетягнути товар"
+                  title="Перетягніть товар до іншої групи"
                 >
-                  <HugeiconsIcon
-                    icon={CheckmarkCircle01Icon}
-                    data-icon="inline-start"
-                  />
-                  {selected ? "Зняти вибір" : "Вибрати товар"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <HugeiconsIcon icon={GripVerticalIcon} className="size-4" />
+                </button>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="secondary"
+                        size="icon-sm"
+                        className="bg-background/95"
+                        aria-label="Дії з товаром"
+                      />
+                    }
+                  >
+                    <HugeiconsIcon icon={MoreHorizontalIcon} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem onClick={() => onDetails?.(product)}>
+                        <HugeiconsIcon
+                          icon={InformationCircleIcon}
+                          data-icon="inline-start"
+                        />
+                        Деталі
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onMove?.(product)}>
+                        <HugeiconsIcon
+                          icon={MoveHorizontalIcon}
+                          data-icon="inline-start"
+                        />
+                        Перемістити до групи…
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => void removeProductFromGroup(product.id)}
+                      >
+                        <HugeiconsIcon
+                          icon={UnfoldMoreIcon}
+                          data-icon="inline-start"
+                        />
+                        Винести в окрему групу
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={toggleSelection}>
+                      <HugeiconsIcon
+                        icon={CheckmarkCircle01Icon}
+                        data-icon="inline-start"
+                      />
+                      {selected ? "Зняти вибір" : "Вибрати товар"}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : null}
+
+            {isGroup && groupCount ? (
+              <span className="rounded-md bg-background/95 px-1.5 py-1 text-[10px] font-medium">
+                {groupCount} тов.
+              </span>
+            ) : null}
+            {isGroup && groupLinkedCount > 0 ? (
+              <span
+                className="flex items-center gap-0.5 rounded-md bg-background/95 px-1.5 py-1 text-[10px] text-muted-foreground"
+                title="Є схожа група в іншій категорії"
+              >
+                <HugeiconsIcon icon={Link01Icon} className="size-3" />
+                {groupLinkedCount}
+              </span>
+            ) : null}
           </div>
         </div>
 
@@ -275,15 +372,46 @@ export const ProductCard = memo(function ProductCard({
           {product.goodsTitle}
         </p>
 
-        {product.goodsId ? (
+        {isGroup && groupCategories && groupCategories.length > 0 ? (
           <div className="flex flex-wrap items-center gap-1">
-            <Badge
-              variant="outline"
-              className="font-mono text-[10px] text-muted-foreground"
-              title="goods_id"
-            >
-              ID {product.goodsId}
-            </Badge>
+            {groupCategories.map((category) => (
+              <Badge
+                key={category.id || "no-category"}
+                variant={groupMixed ? "destructive" : "outline"}
+                className="max-w-full truncate text-[10px]"
+                title={category.id}
+              >
+                {category.title}
+                {groupMixed ? ` · ${category.count}` : ""}
+              </Badge>
+            ))}
+            {groupTransferred ? (
+              <Badge variant="secondary" className="text-[10px]">
+                Буде перенесено
+              </Badge>
+            ) : null}
+          </div>
+        ) : null}
+
+        {product.goodsId || isEmbedded ? (
+          <div className="flex flex-wrap items-center gap-1">
+            {product.goodsId ? (
+              <Badge
+                variant="outline"
+                className="font-mono text-[10px] text-muted-foreground"
+                title="goods_id"
+              >
+                ID {product.goodsId}
+              </Badge>
+            ) : null}
+            {isEmbedded ? (
+              <Badge
+                variant="outline"
+                className="max-w-full truncate text-[10px] text-muted-foreground"
+              >
+                {product.originalCategoryTitle ?? product.categoryTitle}
+              </Badge>
+            ) : null}
           </div>
         ) : null}
 
@@ -379,16 +507,37 @@ export const ProductCard = memo(function ProductCard({
           </p>
         ) : null}
 
-        <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={() => onDetails(product)}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <HugeiconsIcon icon={InformationCircleIcon} data-icon="inline-start" />
-            Деталі
-          </Button>
+        <div
+          className="mt-auto flex flex-wrap items-center gap-1.5 pt-1"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          {isGroup && onOpenGroup ? (
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => onOpenGroup()}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <HugeiconsIcon icon={UnfoldMoreIcon} data-icon="inline-start" />
+              Відкрити групу
+            </Button>
+          ) : null}
+
+          {onDetails ? (
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => onDetails(product)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <HugeiconsIcon
+                icon={InformationCircleIcon}
+                data-icon="inline-start"
+              />
+              Деталі
+            </Button>
+          ) : null}
 
           {gomerUrl ? (
             <a

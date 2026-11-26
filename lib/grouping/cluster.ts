@@ -64,6 +64,15 @@ export function hasStrongPhotoOverlap(
   return minCount > 0 && sharedCount / minCount >= PHOTO_OVERLAP_THRESHOLD;
 }
 
+/** Настройки фото-кластеризации. */
+export interface ClusterOptions {
+  /**
+   * Не ограничивать сравнение категорией. Нужно для потока разнесения
+   * по категориям: одна модель не должна лежать в разных категориях.
+   */
+  acrossCategories?: boolean;
+}
+
 /**
  * Группирует товары по общим ссылкам на фото.
  *
@@ -71,7 +80,10 @@ export function hasStrongPhotoOverlap(
  * категории. Затем объединяем только пары, у которых доля общих фото
  * достигает PHOTO_OVERLAP_THRESHOLD.
  */
-export function clusterByPhotos(products: ParsedProduct[]): Cluster[] {
+export function clusterByPhotos(
+  products: ParsedProduct[],
+  options: ClusterOptions = {},
+): Cluster[] {
   const uf = new UnionFind(products.length);
   const photoSets = products.map(
     (product) => new Set(product.imageUrls.filter(Boolean)),
@@ -93,16 +105,23 @@ export function clusterByPhotos(products: ParsedProduct[]): Cluster[] {
   for (const indexes of urlIndex.values()) {
     if (indexes.length < 2) continue;
 
-    // Один URL может встречаться в разных категориях.
-    const byCategory = new Map<string, number[]>();
-    for (const index of indexes) {
-      const categoryId = products[index].categoryId;
-      const list = byCategory.get(categoryId);
-      if (list) list.push(index);
-      else byCategory.set(categoryId, [index]);
+    // Один URL может встречаться в разных категориях. В обычном потоке
+    // категория — жёсткая граница, в потоке категорий сравниваем все пары.
+    let groups: number[][];
+    if (options.acrossCategories) {
+      groups = [indexes];
+    } else {
+      const byCategory = new Map<string, number[]>();
+      for (const index of indexes) {
+        const categoryId = products[index].categoryId;
+        const list = byCategory.get(categoryId);
+        if (list) list.push(index);
+        else byCategory.set(categoryId, [index]);
+      }
+      groups = [...byCategory.values()];
     }
 
-    for (const categoryIndexes of byCategory.values()) {
+    for (const categoryIndexes of groups) {
       for (let i = 0; i < categoryIndexes.length; i++) {
         for (let j = i + 1; j < categoryIndexes.length; j++) {
           const key = pairKey(categoryIndexes[i], categoryIndexes[j]);

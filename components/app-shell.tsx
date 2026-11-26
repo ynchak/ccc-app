@@ -9,16 +9,17 @@ import {
   useState,
   type DragEvent,
 } from "react";
+import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
   CheckmarkCircleIcon,
   FileImportIcon,
   GroupLayersIcon,
-  Menu01Icon,
-  SidebarLeft01Icon,
+  TagsIcon,
 } from "@hugeicons/core-free-icons";
 
+import { AppHeader } from "@/components/app-header";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
   MergeGroupsDialog,
@@ -42,7 +43,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Empty,
   EmptyDescription,
@@ -53,6 +54,7 @@ import {
 import { PRODUCT_DRAG_TYPE, hasDragType, readDragIds } from "@/lib/dnd";
 import { formatUsd } from "@/lib/ai-cost";
 import { MAX_AI_CLEANUP_RUNS } from "@/lib/ai-limits";
+import { exportFinalXlsx } from "@/lib/export/final-xlsx";
 import { exportXlsx } from "@/lib/export/xlsx";
 import { paginate } from "@/lib/pagination";
 import { groupsLabel, productsLabel } from "@/lib/plural";
@@ -454,12 +456,21 @@ export function AppShell() {
     if (!activeDataset) return;
     setIsExporting(true);
     try {
-      await exportXlsx(
-        [...products.values()],
-        [...groups.values()],
-        productToGroup,
-        activeDataset.name,
-      );
+      if (activeDataset.flow === "categories") {
+        await exportFinalXlsx(
+          [...products.values()],
+          [...groups.values()],
+          productToGroup,
+          activeDataset.name,
+        );
+      } else {
+        await exportXlsx(
+          [...products.values()],
+          [...groups.values()],
+          productToGroup,
+          activeDataset.name,
+        );
+      }
       notify("XLSX-файл сформовано", "success");
     } catch {
       notify("Не вдалося сформувати XLSX", "error");
@@ -606,69 +617,39 @@ export function AppShell() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
-          <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center gap-2 px-4 py-2.5">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="lg:hidden"
-              onClick={() => setSidebarOpen(true)}
-              aria-label="Відкрити список файлів"
-            >
-              <HugeiconsIcon icon={Menu01Icon} />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="hidden lg:inline-flex"
-              onClick={() => setSidebarCollapsed((value) => !value)}
-              aria-label={
-                sidebarCollapsed
-                  ? "Показати список файлів"
-                  : "Приховати список файлів"
-              }
-              title={
-                sidebarCollapsed
-                  ? "Показати список файлів"
-                  : "Приховати список файлів"
-              }
-            >
-              <HugeiconsIcon icon={SidebarLeft01Icon} />
-            </Button>
-
-            <div className="flex w-40 min-w-0 shrink-0 flex-col sm:w-52">
-              <span className="truncate text-sm font-semibold">
-                {activeDataset?.name ?? "Файл не завантажено"}
-              </span>
-              <span className="truncate text-xs text-muted-foreground">
-                {activeDataset
-                  ? `${productsLabel(products.size)} · ${groupsLabel(groups.size)}`
-                  : "Завантажте CSV, щоб почати групування"}
-              </span>
-            </div>
-
-            {activeDataset ? (
-              <div className="min-w-0 flex-1">
-                <GroupHeaderControls
-                  onExport={handleExport}
-                  isExporting={isExporting}
-                  onUndo={handleUndo}
-                  canUndo={undoStack.length > 0}
-                  onCleanTitles={() => void handleCleanTitles()}
-                  isCleaning={isCleaningTitles}
-                  cleanupRunsLeft={cleanupRunsLeft}
-                  cleanupLimitReached={cleanupLimitReached}
-                  suggestionCount={mergeSuggestions.length}
-                  onOpenSuggestions={() => setSuggestionsOpen(true)}
-                  onSearchChange={handleSearchChange}
-                />
-              </div>
-            ) : (
-              <div className="flex-1" />
-            )}
-
-            <div className="flex items-center gap-2">
+        <AppHeader
+          datasetName={activeDataset?.name ?? "Файл не завантажено"}
+          datasetSubtitle={
+            activeDataset
+              ? `${productsLabel(products.size)} · ${groupsLabel(groups.size)}${
+                  activeDataset.flow === "categories"
+                    ? " · після категорій"
+                    : ""
+                }`
+              : "Завантажте CSV, щоб почати групування"
+          }
+          onOpenSidebar={() => setSidebarOpen(true)}
+          onToggleSidebar={() => setSidebarCollapsed((value) => !value)}
+          sidebarCollapsed={sidebarCollapsed}
+          controls={
+            activeDataset ? (
+              <GroupHeaderControls
+                onExport={handleExport}
+                isExporting={isExporting}
+                onUndo={handleUndo}
+                canUndo={undoStack.length > 0}
+                onCleanTitles={() => void handleCleanTitles()}
+                isCleaning={isCleaningTitles}
+                cleanupRunsLeft={cleanupRunsLeft}
+                cleanupLimitReached={cleanupLimitReached}
+                suggestionCount={mergeSuggestions.length}
+                onOpenSuggestions={() => setSuggestionsOpen(true)}
+                onSearchChange={handleSearchChange}
+              />
+            ) : undefined
+          }
+          trailing={
+            <>
               {lastSavedAt ? (
                 <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
                   <HugeiconsIcon
@@ -686,6 +667,18 @@ export function AppShell() {
                   AI {formatUsd(activeDataset.aiCostUsd)}
                 </span>
               ) : null}
+              {activeDataset?.flow === "categories" ? (
+                <Link
+                  href="/categories"
+                  className={buttonVariants({
+                    variant: "outline",
+                    size: "sm",
+                  })}
+                >
+                  <HugeiconsIcon icon={TagsIcon} data-icon="inline-start" />
+                  Категорії
+                </Link>
+              ) : null}
               <Button
                 variant="outline"
                 size="sm"
@@ -695,25 +688,20 @@ export function AppShell() {
                 <HugeiconsIcon icon={FileImportIcon} data-icon="inline-start" />
                 CSV
               </Button>
-            </div>
-          </div>
-
-          {activeDataset ? (
-            <div className="border-t px-4 py-2">
-              <div className="mx-auto w-full max-w-[1440px]">
-                <GroupFilterBar
-                  onMergeSelected={() => {
-                    const ids = [
-                      ...useAppStore.getState().selectedGroupIds,
-                    ];
-                    if (ids.length < 2) return;
-                    setMergeGroupIds(ids);
-                  }}
-                />
-              </div>
-            </div>
-          ) : null}
-        </header>
+            </>
+          }
+          subheader={
+            activeDataset ? (
+              <GroupFilterBar
+                onMergeSelected={() => {
+                  const ids = [...useAppStore.getState().selectedGroupIds];
+                  if (ids.length < 2) return;
+                  setMergeGroupIds(ids);
+                }}
+              />
+            ) : undefined
+          }
+        />
 
         <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1440px] px-4 py-4">

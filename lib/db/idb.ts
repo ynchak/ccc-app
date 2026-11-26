@@ -1,8 +1,10 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 
 import type {
+  CategoryCluster,
   Dataset,
   Group,
+  NewCategoryCluster,
   NewGroup,
   NewGroupForDataset,
   NewProduct,
@@ -32,6 +34,11 @@ interface AppDB extends DBSchema {
     value: Group;
     indexes: { "by-dataset": number; "by-titleKey": string };
   };
+  categoryClusters: {
+    key: number;
+    value: CategoryCluster;
+    indexes: { "by-dataset": number };
+  };
   settings: {
     key: string;
     value: { key: string; value: unknown };
@@ -52,7 +59,7 @@ interface AppDB extends DBSchema {
 }
 
 const DB_NAME = "ccc-groups";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbPromise: Promise<IDBPDatabase<AppDB>> | null = null;
 
@@ -86,6 +93,14 @@ function getDb(): Promise<IDBPDatabase<AppDB>> {
 
         if (oldVersion < 2) {
           db.createObjectStore("llmCache", { keyPath: "key" });
+        }
+
+        if (oldVersion < 3) {
+          const clusters = db.createObjectStore("categoryClusters", {
+            keyPath: "id",
+            autoIncrement: true,
+          });
+          clusters.createIndex("by-dataset", "datasetId");
         }
       },
     });
@@ -159,6 +174,56 @@ export async function loadGroups(datasetId: number): Promise<Group[]> {
   return db.getAllFromIndex("groups", "by-dataset", datasetId);
 }
 
+/** Читает кластеры категорий датасета. */
+export async function loadCategoryClusters(
+  datasetId: number,
+): Promise<CategoryCluster[]> {
+  const db = await getDb();
+  return db.getAllFromIndex("categoryClusters", "by-dataset", datasetId);
+}
+
+/** Добавляет кластеры категорий и возвращает их id в порядке передачи. */
+export async function addCategoryClusters(
+  datasetId: number,
+  clusters: NewCategoryCluster[],
+): Promise<number[]> {
+  if (clusters.length === 0) return [];
+  const db = await getDb();
+  const tx = db.transaction("categoryClusters", "readwrite");
+  const requests = clusters.map((cluster) =>
+    tx.store.add({ ...cluster, datasetId } as CategoryCluster),
+  );
+  const ids = (await Promise.all(requests)) as number[];
+  await tx.done;
+  return ids;
+}
+
+/** Записывает изменённые кластеры категорий. */
+export async function putCategoryClusters(
+  clusters: CategoryCluster[],
+): Promise<void> {
+  if (clusters.length === 0) return;
+  const db = await getDb();
+  const tx = db.transaction("categoryClusters", "readwrite");
+  await Promise.all(clusters.map((cluster) => tx.store.put(cluster)));
+  await tx.done;
+}
+
+/** Удаляет кластеры категорий. */
+export async function deleteCategoryClusters(ids: number[]): Promise<void> {
+  if (ids.length === 0) return;
+  const db = await getDb();
+  const tx = db.transaction("categoryClusters", "readwrite");
+  await Promise.all(ids.map((id) => tx.store.delete(id)));
+  await tx.done;
+}
+
+/** Записывает изменённый датасет. */
+export async function putDataset(dataset: Dataset): Promise<void> {
+  const db = await getDb();
+  await db.put("datasets", dataset);
+}
+
 /** Читает все датасеты. */
 export async function loadDatasets(): Promise<Dataset[]> {
   const db = await getDb();
@@ -223,6 +288,17 @@ export async function updateDatasetCounts(
   await db.put("datasets", { ...dataset, groupCount });
 }
 
+/** Обновляет количество кластеров на этапе категорий. */
+export async function updateDatasetClusterCount(
+  datasetId: number,
+  clusterCount: number,
+): Promise<void> {
+  const db = await getDb();
+  const dataset = await db.get("datasets", datasetId);
+  if (!dataset) return;
+  await db.put("datasets", { ...dataset, clusterCount });
+}
+
 /** Переименовывает датасет. */
 /** Сохраняет количество ручных запусков очистки для файла. */
 export async function updateDatasetCleanupRuns(
@@ -263,22 +339,28 @@ export async function renameDataset(
 /** Удаляет датасет вместе с товарами и группами. */
 export async function deleteDataset(datasetId: number): Promise<void> {
   const db = await getDb();
-  const tx = db.transaction(["datasets", "products", "groups"], "readwrite");
+  const tx = db.transaction(
+    ["datasets", "products", "groups", "categoryClusters"],
+    "readwrite",
+  );
 
   const datasetStore = tx.objectStore("datasets");
   const productStore = tx.objectStore("products");
   const groupStore = tx.objectStore("groups");
+  const clusterStore = tx.objectStore("categoryClusters");
 
   // Сначала получаем все ключи, затем удаляем записи параллельно.
-  const [productKeys, groupKeys] = await Promise.all([
+  const [productKeys, groupKeys, clusterKeys] = await Promise.all([
     productStore.index("by-dataset").getAllKeys(datasetId),
     groupStore.index("by-dataset").getAllKeys(datasetId),
+    clusterStore.index("by-dataset").getAllKeys(datasetId),
   ]);
 
   await Promise.all([
     datasetStore.delete(datasetId),
     ...productKeys.map((key) => productStore.delete(key)),
     ...groupKeys.map((key) => groupStore.delete(key)),
+    ...clusterKeys.map((key) => clusterStore.delete(key)),
   ]);
 
   await tx.done;

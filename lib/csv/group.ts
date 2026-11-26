@@ -17,6 +17,18 @@ export interface GroupedCsv {
   autoMergedCount: number;
 }
 
+/** Группирует уже разобранные товары внутри их категорий. */
+export function groupProducts(products: ParsedProduct[]): {
+  groups: ClusteredGroup[];
+  autoMergedCount: number;
+} {
+  const { groups, mergedCount } = mergeByTitle(
+    toGroups(clusterByPhotos(products), products),
+    products,
+  );
+  return { groups, autoMergedCount: mergedCount };
+}
+
 /**
  * Полный разбор CSV и группировка. Чистая функция без DOM и IndexedDB,
  * поэтому может выполняться в Web Worker.
@@ -30,10 +42,7 @@ export function groupCsvText(text: string): GroupedCsv {
     );
   }
 
-  const { groups, mergedCount } = mergeByTitle(
-    toGroups(clusterByPhotos(products), products),
-    products,
-  );
+  const { groups, autoMergedCount } = groupProducts(products);
 
   return {
     products,
@@ -41,6 +50,6 @@ export function groupCsvText(text: string): GroupedCsv {
     columnMap,
     skippedRows,
     groups,
-    autoMergedCount: mergedCount,
+    autoMergedCount,
   };
 }

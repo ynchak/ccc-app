@@ -20,6 +20,14 @@ export function groupsLabel(count: number): string {
   return `${count} ${pluralUk(count, "група", "групи", "груп")}`;
 }
 
+export function clustersLabel(count: number): string {
+  return `${count} ${pluralUk(count, "кластер", "кластери", "кластерів")}`;
+}
+
+export function categoriesLabel(count: number): string {
+  return `${count} ${pluralUk(count, "категорія", "категорії", "категорій")}`;
+}
+
 export function singlesLabel(count: number): string {
   return `${count} ${pluralUk(count, "одинокий", "одинокі", "одиноких")}`;
 }

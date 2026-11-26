@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Cancel01Icon,
@@ -9,6 +10,7 @@ import {
   FileImportIcon,
   Folder01Icon,
   MoreHorizontalIcon,
+  TagsIcon,
 } from "@hugeicons/core-free-icons";
 
 import { LogoutButton } from "@/components/auth/logout-button";
@@ -24,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -303,13 +305,25 @@ export function AppSidebar({
           </div>
         </div>
 
-        <div className="mt-auto flex items-center gap-2 border-t p-3">
-          <Button className="flex-1 justify-start" onClick={onImport}>
-            <HugeiconsIcon icon={FileImportIcon} data-icon="inline-start" />
-            Завантажити CSV
-          </Button>
-          <LogoutButton />
-          <ThemeSelect />
+        <div className="mt-auto flex flex-col gap-2 border-t p-3">
+          <Link
+            href="/categories"
+            className={buttonVariants({
+              variant: "outline",
+              className: "justify-start",
+            })}
+          >
+            <HugeiconsIcon icon={TagsIcon} data-icon="inline-start" />
+            Спочатку категорії
+          </Link>
+          <div className="flex items-center gap-2">
+            <Button className="flex-1 justify-start" onClick={onImport}>
+              <HugeiconsIcon icon={FileImportIcon} data-icon="inline-start" />
+              Завантажити CSV
+            </Button>
+            <LogoutButton />
+            <ThemeSelect />
+          </div>
         </div>
       </aside>
 
