@@ -2,6 +2,7 @@
 
 import writeXlsxFile from "write-excel-file/browser";
 
+import { stripTableFileExtension } from "@/lib/file-name";
 import {
   buildFinalExportRows,
   type FinalExportRow,
@@ -76,5 +77,5 @@ export async function exportFinalXlsx(
         cell: (row: FinalExportRow) => ({ value: row.groupTitle, ...border }),
       },
     ],
-  }).toFile(`${fileName.replace(/\.[^.]+$/, "")}.xlsx`);
+  }).toFile(`${stripTableFileExtension(fileName)}.xlsx`);
 }

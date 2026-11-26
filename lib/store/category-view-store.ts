@@ -15,6 +15,8 @@ export interface CategoryViewState {
   search: string;
   scrollTop: number;
   visibleLimits: Record<string, number>;
+  groupPages: Record<string, number>;
+  groupPageSizes: Record<string, PageSize>;
   page: number;
   pageSize: PageSize;
 }
@@ -25,6 +27,8 @@ const DEFAULT_VIEW: CategoryViewState = {
   search: "",
   scrollTop: 0,
   visibleLimits: {},
+  groupPages: {},
+  groupPageSizes: {},
   page: 1,
   pageSize: CATEGORY_PAGE_SIZE_DEFAULT,
 };

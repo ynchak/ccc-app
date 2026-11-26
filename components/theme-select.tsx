@@ -59,8 +59,8 @@ function useMounted(): boolean {
   );
 }
 
-/** Компактный выбор темы в виде иконки. */
-export function ThemeSelect() {
+/** Компактный выбор темы. */
+export function ThemeSelect({ showLabel = false }: { showLabel?: boolean }) {
   const { theme, setTheme } = useTheme();
   const mounted = useMounted();
   const value: ThemeValue =
@@ -122,7 +122,8 @@ export function ThemeSelect() {
         render={
           <Button
             variant="outline"
-            size="icon"
+            size={showLabel ? "sm" : "icon"}
+            className={showLabel ? "w-full justify-start" : undefined}
             aria-label={title}
             title={title}
           />
@@ -136,7 +137,9 @@ export function ThemeSelect() {
                 ? Sun03Icon
                 : ComputerIcon
           }
+          data-icon={showLabel ? "inline-start" : undefined}
         />
+        {showLabel ? "Тема" : null}
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="end" className="min-w-52">
         <DropdownMenuGroup>

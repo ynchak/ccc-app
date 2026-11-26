@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  ArrowLeft01Icon,
   Delete02Icon,
   Edit02Icon,
   FileImportIcon,
@@ -19,10 +20,9 @@ import { CategoryHeaderControls } from "@/components/categories/category-header-
 import { CategorySectionBlock } from "@/components/categories/category-section";
 import { CategoryImportDialog } from "@/components/categories/category-import-dialog";
 import { CategoryPicker } from "@/components/categories/category-picker";
+import { AccountControls } from "@/components/account-controls";
 import { AppHeader } from "@/components/app-header";
-import { LogoutButton } from "@/components/auth/logout-button";
 import { BrandMark } from "@/components/brand-mark";
-import { ThemeSelect } from "@/components/theme-select";
 import { Toaster } from "@/components/toaster";
 import { GroupPagination } from "@/components/groups/group-pagination";
 import {
@@ -376,10 +376,7 @@ function CategorySidebar({
             <HugeiconsIcon icon={GroupLayersIcon} data-icon="inline-start" />
             До групування
           </Link>
-          <div className="flex items-center gap-2">
-            <LogoutButton />
-            <ThemeSelect />
-          </div>
+          <AccountControls />
         </div>
       </aside>
     </>
@@ -458,6 +455,10 @@ export function CategoryApp() {
     datasetId: number | null;
     id: number | null;
   }>({ datasetId: null, id: null });
+  const [openedCategoryPage, setOpenedCategoryPage] = useState<{
+    datasetId: number | null;
+    id: string | null;
+  }>({ datasetId: null, id: null });
   const [bulkTargetId, setBulkTargetId] = useState("");
   const mainRef = useRef<HTMLElement>(null);
   const scrollSaveRef = useRef<number | null>(null);
@@ -469,7 +470,8 @@ export function CategoryApp() {
   const updateView = useCategoryViewStore((state) => state.updateView);
   const search = view.search;
   const categoryFilter = view.categoryFilter;
-  const visibleLimits = view.visibleLimits;
+  const groupPages = view.groupPages ?? {};
+  const groupPageSizes = view.groupPageSizes ?? {};
   const page = view.page ?? 1;
   const pageSize = view.pageSize ?? CATEGORY_PAGE_SIZE_DEFAULT;
   const collapsedSections = useMemo(
@@ -479,9 +481,19 @@ export function CategoryApp() {
 
   const openedClusterId =
     openedCluster.datasetId === activeDatasetId ? openedCluster.id : null;
+  const openedCategoryPageId =
+    openedCategoryPage.datasetId === activeDatasetId
+      ? openedCategoryPage.id
+      : null;
   const setOpenedClusterId = useCallback(
     (id: number | null) => {
       setOpenedCluster({ datasetId: activeDatasetId, id });
+    },
+    [activeDatasetId],
+  );
+  const setOpenedCategoryPageId = useCallback(
+    (id: string | null) => {
+      setOpenedCategoryPage({ datasetId: activeDatasetId, id });
     },
     [activeDatasetId],
   );
@@ -509,12 +521,12 @@ export function CategoryApp() {
   }, []);
 
   const setSearch = useCallback(
-    (value: string) => updateView(viewKey, { search: value, page: 1 }),
+    (value: string) => updateView(viewKey, { search: value, page: 1, groupPages: {} }),
     [updateView, viewKey],
   );
   const setCategoryFilter = useCallback(
     (value: string | null) => {
-      updateView(viewKey, { categoryFilter: value, page: 1 });
+      updateView(viewKey, { categoryFilter: value, page: 1, groupPages: {} });
       if (value) {
         const current =
           useCategoryViewStore.getState().views[viewKey]?.collapsedSections ??
@@ -545,12 +557,25 @@ export function CategoryApp() {
   const expandAll = useCallback(() => {
     updateView(viewKey, { collapsedSections: [] });
   }, [updateView, viewKey]);
-  const showMore = useCallback(
-    (sectionId: string, limit: number) => {
+  const setGroupPage = useCallback(
+    (sectionId: string, page: number) => {
       const current =
-        useCategoryViewStore.getState().views[viewKey]?.visibleLimits ?? {};
+        useCategoryViewStore.getState().views[viewKey]?.groupPages ?? {};
       updateView(viewKey, {
-        visibleLimits: { ...current, [sectionId]: limit },
+        groupPages: { ...current, [sectionId]: page },
+      });
+    },
+    [updateView, viewKey],
+  );
+  const setGroupPageSize = useCallback(
+    (sectionId: string, pageSize: PageSize) => {
+      const currentPages =
+        useCategoryViewStore.getState().views[viewKey]?.groupPages ?? {};
+      const currentSizes =
+        useCategoryViewStore.getState().views[viewKey]?.groupPageSizes ?? {};
+      updateView(viewKey, {
+        groupPages: { ...currentPages, [sectionId]: 1 },
+        groupPageSizes: { ...currentSizes, [sectionId]: pageSize },
       });
     },
     [updateView, viewKey],
@@ -607,6 +632,12 @@ export function CategoryApp() {
     () => paginate(filteredSections, page, pageSize),
     [filteredSections, page, pageSize],
   );
+  const openedPageSection =
+    openedCategoryPageId === null
+      ? null
+      : filteredSections.find(
+          (section) => section.id === openedCategoryPageId,
+        ) ?? null;
 
   const selectedClusters = useMemo(
     () =>
@@ -650,6 +681,15 @@ export function CategoryApp() {
       setIsUndoing(false);
     }
   };
+
+  const openCategoryPage = useCallback(
+    (sectionId: string) => {
+      setCategoryFilter(null);
+      setOpenedCategoryPageId(sectionId);
+      mainRef.current?.scrollTo({ top: 0 });
+    },
+    [setCategoryFilter, setOpenedCategoryPageId],
+  );
 
   const handleExport = async () => {
     if (!activeDataset) return;
@@ -861,6 +901,59 @@ export function CategoryApp() {
                   Завантажити CSV
                 </Button>
               </Empty>
+            ) : openedCategoryPageId !== null ? (
+              <>
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setOpenedCategoryPageId(null)}
+                  >
+                    <HugeiconsIcon
+                      icon={ArrowLeft01Icon}
+                      data-icon="inline-start"
+                    />
+                    До категорій
+                  </Button>
+                </div>
+
+                {openedPageSection ? (
+                  <CategorySectionBlock
+                    section={openedPageSection}
+                    expanded
+                    pageMode
+                    groupPage={
+                      groupPages[openedPageSection.id] ?? 1
+                    }
+                    groupPageSize={
+                      groupPageSizes[openedPageSection.id] ?? 25
+                    }
+                    products={products}
+                    selectedClusterIds={selectedClusterIds}
+                    modelLinks={modelLinks}
+                    cardSize={cardSize}
+                    onToggleSection={toggleSection}
+                    onToggleSelect={toggleClusterSelection}
+                    onOpen={setOpenedClusterId}
+                    onAddSelection={addClusterSelection}
+                    onRemoveSelection={removeClusterSelection}
+                    onGroupPageChange={setGroupPage}
+                    onGroupPageSizeChange={setGroupPageSize}
+                  />
+                ) : (
+                  <Empty className="border">
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <HugeiconsIcon icon={FileImportIcon} />
+                      </EmptyMedia>
+                      <EmptyTitle>Категорію не знайдено</EmptyTitle>
+                      <EmptyDescription>
+                        Поверніться до списку категорій.
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                )}
+              </>
             ) : (
               <>
                 <GroupPagination
@@ -881,7 +974,8 @@ export function CategoryApp() {
                       key={section.id}
                       section={section}
                       expanded={isSectionExpanded(section)}
-                      limit={visibleLimits[section.id] ?? 50}
+                      groupPage={groupPages[section.id] ?? 1}
+                      groupPageSize={groupPageSizes[section.id] ?? 25}
                       products={products}
                       selectedClusterIds={selectedClusterIds}
                       modelLinks={modelLinks}
@@ -889,9 +983,11 @@ export function CategoryApp() {
                       onToggleSection={toggleSection}
                       onToggleSelect={toggleClusterSelection}
                       onOpen={setOpenedClusterId}
+                      onOpenPage={openCategoryPage}
                       onAddSelection={addClusterSelection}
                       onRemoveSelection={removeClusterSelection}
-                      onShowMore={showMore}
+                      onGroupPageChange={setGroupPage}
+                      onGroupPageSizeChange={setGroupPageSize}
                     />
                   ))}
                 </div>

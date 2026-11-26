@@ -2,6 +2,7 @@
 
 import writeXlsxFile from "write-excel-file/browser";
 
+import { stripTableFileExtension } from "@/lib/file-name";
 import {
   buildCategoryChangeRows,
   type CategoryExportRow,
@@ -63,7 +64,7 @@ export async function exportCategoryChanges(
         cell: (row: CategoryExportRow) => ({ value: row.categoryId, ...border }),
       },
     ],
-  }).toFile(`${fileName.replace(/\.[^.]+$/, "")}-categories.xlsx`);
+  }).toFile(`${stripTableFileExtension(fileName)}-categories.xlsx`);
 
   return rows.length;
 }

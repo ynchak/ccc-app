@@ -20,6 +20,8 @@ import {
   setSetting,
   updateDatasetClusterCount,
 } from "@/lib/db/idb";
+import { datasetNameFromProducts } from "@/lib/dataset-name";
+import { stripTableFileExtension } from "@/lib/file-name";
 import { defaultGroupTitle } from "@/lib/grouping/cluster";
 import {
   DEFAULT_CARD_WIDTH,
@@ -380,9 +382,11 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
       const parsed = await parseCategoryCsv(text);
       onStage?.("saving");
 
+      const importedAt = Date.now();
+      const datasetName = datasetNameFromProducts(parsed.products, importedAt);
       const draft: Omit<Dataset, "id"> = {
-        name: fileName,
-        importedAt: Date.now(),
+        name: datasetName,
+        importedAt,
         rowCount: parsed.products.length,
         groupCount: parsed.clusters.length,
         clusterCount: parsed.clusters.length,
@@ -923,7 +927,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
       );
 
       const draft: Omit<Dataset, "id"> = {
-        name: `${dataset.name.replace(/\.[^.]+$/, "")} · групи.csv`,
+        name: `${stripTableFileExtension(dataset.name)} · групи.csv`,
         importedAt: Date.now(),
         rowCount: products.length,
         groupCount: groups.length,
@@ -1102,7 +1106,10 @@ export function useCategorySections(): CategorySection[] {
       isAttention: boolean,
       list: CategoryCluster[],
     ): CategorySection => {
-      const sorted = [...list].sort((a, b) => a.number - b.number);
+      const sorted = [...list].sort(
+        (a, b) =>
+          a.title.localeCompare(b.title, "uk") || a.number - b.number,
+      );
       return {
         id,
         title,

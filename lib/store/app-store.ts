@@ -25,6 +25,7 @@ import {
   updateDatasetCleanupRuns,
   updateDatasetCounts,
 } from "@/lib/db/idb";
+import { datasetNameFromProducts } from "@/lib/dataset-name";
 import {
   defaultGroupTitle,
   normalizeTitle,
@@ -860,10 +861,12 @@ export const useAppStore = create<AppState>()(
         );
 
         onStage?.("saving");
+        const importedAt = Date.now();
+        const datasetName = datasetNameFromProducts(parsed, importedAt);
         const datasetId = await saveDataset(
           {
-            name: fileName,
-            importedAt: Date.now(),
+            name: datasetName,
+            importedAt,
             rowCount: parsed.length,
             groupCount: merged.length,
             autoMergedCount,

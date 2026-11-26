@@ -5,14 +5,17 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowDown01Icon,
   ArrowRight01Icon,
+  ArrowUpRight01Icon,
 } from "@hugeicons/core-free-icons";
 
 import { CategoryGroupCard } from "@/components/categories/category-group-card";
+import { GroupPagination } from "@/components/groups/group-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cardGridStyle, type CardWidth } from "@/lib/card-size";
 import type { ModelLink } from "@/lib/category/links";
+import { paginate, type PageSize } from "@/lib/pagination";
 import { groupsLabel, productsLabel } from "@/lib/plural";
 import type { CategorySection } from "@/lib/store/category-store";
 import type { CategoryCluster, Product } from "@/lib/types";
@@ -21,7 +24,9 @@ import type { CategoryCluster, Product } from "@/lib/types";
 export const CategorySectionBlock = memo(function CategorySectionBlock({
   section,
   expanded,
-  limit,
+  pageMode = false,
+  groupPage,
+  groupPageSize,
   products,
   selectedClusterIds,
   modelLinks,
@@ -29,13 +34,17 @@ export const CategorySectionBlock = memo(function CategorySectionBlock({
   onToggleSection,
   onToggleSelect,
   onOpen,
+  onOpenPage,
   onAddSelection,
   onRemoveSelection,
-  onShowMore,
+  onGroupPageChange,
+  onGroupPageSizeChange,
 }: {
   section: CategorySection;
   expanded: boolean;
-  limit: number;
+  pageMode?: boolean;
+  groupPage: number;
+  groupPageSize: PageSize;
   products: Map<number, Product>;
   selectedClusterIds: Set<number>;
   modelLinks: Map<number, ModelLink[]>;
@@ -43,11 +52,15 @@ export const CategorySectionBlock = memo(function CategorySectionBlock({
   onToggleSection: (sectionId: string) => void;
   onToggleSelect: (clusterId: number) => void;
   onOpen: (clusterId: number) => void;
+  onOpenPage?: (sectionId: string) => void;
   onAddSelection: (clusterIds: number[]) => void;
   onRemoveSelection: (clusterIds: number[]) => void;
-  onShowMore: (sectionId: string, limit: number) => void;
+  onGroupPageChange: (sectionId: string, page: number) => void;
+  onGroupPageSizeChange: (sectionId: string, pageSize: PageSize) => void;
 }) {
-  const visibleClusters = section.clusters.slice(0, limit);
+  const groupsPage = paginate(section.clusters, groupPage, groupPageSize);
+  const visibleClusters = groupsPage.items;
+  const showPagination = section.clusters.length > groupPageSize;
   const sectionIds = section.clusters.map((cluster) => cluster.id);
   const allSelected =
     sectionIds.length > 0 &&
@@ -62,13 +75,19 @@ export const CategorySectionBlock = memo(function CategorySectionBlock({
       >
         <button
           type="button"
-          onClick={() => onToggleSection(section.id)}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          onClick={() => {
+            if (!pageMode) onToggleSection(section.id);
+          }}
+          className={`flex min-w-0 flex-1 items-center gap-2 text-left ${
+            pageMode ? "cursor-default" : ""
+          }`}
         >
-          <HugeiconsIcon
-            icon={expanded ? ArrowDown01Icon : ArrowRight01Icon}
-            className="size-4 shrink-0 text-muted-foreground"
-          />
+          {!pageMode ? (
+            <HugeiconsIcon
+              icon={expanded ? ArrowDown01Icon : ArrowRight01Icon}
+              className="size-4 shrink-0 text-muted-foreground"
+            />
+          ) : null}
           <span className="min-w-0 flex-1">
             <span
               className={`block truncate text-sm font-semibold ${
@@ -94,6 +113,17 @@ export const CategorySectionBlock = memo(function CategorySectionBlock({
             </Badge>
           ) : null}
         </button>
+        {!pageMode && expanded && onOpenPage ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenPage(section.id)}
+            title="Відкрити сторінку категорії"
+          >
+            <HugeiconsIcon icon={ArrowUpRight01Icon} data-icon="inline-start" />
+            Відкрити
+          </Button>
+        ) : null}
         {expanded ? (
           <Button
             variant="outline"
@@ -117,7 +147,26 @@ export const CategorySectionBlock = memo(function CategorySectionBlock({
             </p>
           ) : (
             <>
-              <div className="grid gap-2" style={cardGridStyle(cardSize)}>
+              {showPagination ? (
+                <GroupPagination
+                  page={groupsPage.page}
+                  totalPages={groupsPage.totalPages}
+                  start={groupsPage.start}
+                  end={groupsPage.end}
+                  totalItems={groupsPage.totalItems}
+                  pageSize={groupPageSize}
+                  itemsLabel="Групи"
+                  onPageChange={(page) => onGroupPageChange(section.id, page)}
+                  onPageSizeChange={(size) =>
+                    onGroupPageSizeChange(section.id, size)
+                  }
+                />
+              ) : null}
+
+              <div
+                className={`grid gap-2 ${showPagination ? "mt-2" : ""}`}
+                style={cardGridStyle(cardSize)}
+              >
                 {visibleClusters.map((cluster: CategoryCluster) => (
                   <CategoryGroupCard
                     key={cluster.id}
@@ -130,17 +179,22 @@ export const CategorySectionBlock = memo(function CategorySectionBlock({
                   />
                 ))}
               </div>
-              {section.clusters.length > limit ? (
-                <div className="mt-3 flex justify-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onShowMore(section.id, limit + 50)}
-                  >
-                    Показати ще{" "}
-                    {Math.min(50, section.clusters.length - limit)}
-                  </Button>
-                </div>
+
+              {showPagination ? (
+                <GroupPagination
+                  page={groupsPage.page}
+                  totalPages={groupsPage.totalPages}
+                  start={groupsPage.start}
+                  end={groupsPage.end}
+                  totalItems={groupsPage.totalItems}
+                  pageSize={groupPageSize}
+                  showPageSize={false}
+                  itemsLabel="Групи"
+                  onPageChange={(page) => onGroupPageChange(section.id, page)}
+                  onPageSizeChange={(size) =>
+                    onGroupPageSizeChange(section.id, size)
+                  }
+                />
               ) : null}
             </>
           )}

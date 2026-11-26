@@ -13,9 +13,8 @@ import {
   TagsIcon,
 } from "@hugeicons/core-free-icons";
 
-import { LogoutButton } from "@/components/auth/logout-button";
+import { AccountControls } from "@/components/account-controls";
 import { BrandMark } from "@/components/brand-mark";
-import { ThemeSelect } from "@/components/theme-select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -306,6 +305,10 @@ export function AppSidebar({
         </div>
 
         <div className="mt-auto flex flex-col gap-2 border-t p-3">
+          <Button className="justify-start" onClick={onImport}>
+            <HugeiconsIcon icon={FileImportIcon} data-icon="inline-start" />
+            Завантажити CSV
+          </Button>
           <Link
             href="/categories"
             className={buttonVariants({
@@ -316,14 +319,7 @@ export function AppSidebar({
             <HugeiconsIcon icon={TagsIcon} data-icon="inline-start" />
             Спочатку категорії
           </Link>
-          <div className="flex items-center gap-2">
-            <Button className="flex-1 justify-start" onClick={onImport}>
-              <HugeiconsIcon icon={FileImportIcon} data-icon="inline-start" />
-              Завантажити CSV
-            </Button>
-            <LogoutButton />
-            <ThemeSelect />
-          </div>
+          <AccountControls />
         </div>
       </aside>
 

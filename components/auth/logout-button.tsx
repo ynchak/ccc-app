@@ -8,7 +8,7 @@ import { Logout01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 
 /** Выход: очищает серверную сессию и возвращает на страницу входа. */
-export function LogoutButton() {
+export function LogoutButton({ showLabel = false }: { showLabel?: boolean }) {
   const [isPending, setIsPending] = useState(false);
   const router = useRouter();
 
@@ -27,13 +27,18 @@ export function LogoutButton() {
   return (
     <Button
       variant="outline"
-      size="icon"
+      size={showLabel ? "sm" : "icon"}
+      className={showLabel ? "w-full justify-start" : undefined}
       onClick={() => void handleLogout()}
       disabled={isPending}
       aria-label="Вийти"
       title="Вийти"
     >
-      <HugeiconsIcon icon={Logout01Icon} />
+      <HugeiconsIcon
+        icon={Logout01Icon}
+        data-icon={showLabel ? "inline-start" : undefined}
+      />
+      {showLabel ? "Вийти" : null}
     </Button>
   );
 }

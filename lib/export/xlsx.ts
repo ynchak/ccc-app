@@ -3,6 +3,7 @@
 import writeXlsxFile from "write-excel-file/browser";
 
 import { buildExportRows, type ExportRow } from "@/lib/export/rows";
+import { stripTableFileExtension } from "@/lib/file-name";
 import type { Group, Product } from "@/lib/types";
 
 /** Рамка ячейки. */
@@ -89,5 +90,5 @@ export async function exportXlsx(
           ]
         : []),
     ],
-  }).toFile(`${fileName.replace(/\.[^.]+$/, "")}.xlsx`);
+  }).toFile(`${stripTableFileExtension(fileName)}.xlsx`);
 }
