@@ -134,34 +134,45 @@ export function targetCategoryFor(
   };
 }
 
-/** Менялась ли категория кластера относительно исходной. */
+/** Менялась ли категория кластера или название любого товара относительно исходной. */
 export function isClusterChanged(
   cluster: CategoryCluster,
   products: Map<number, Product>,
 ): boolean {
-  if (!cluster.targetCategoryId) return false;
   return cluster.productIds.some((productId) => {
     const product = products.get(productId);
     if (!product) return false;
-    return (product.originalCategoryId ?? product.categoryId) !== cluster.targetCategoryId;
+    const categoryChanged =
+      cluster.targetCategoryId &&
+      (product.originalCategoryId ?? product.categoryId) !==
+        cluster.targetCategoryId;
+    const titleChanged =
+      product.goodsTitle !== (product.originalGoodsTitle ?? product.goodsTitle) ||
+      product.goodsTitleUk !==
+        (product.originalGoodsTitleUk ?? product.goodsTitleUk);
+    return categoryChanged || titleChanged;
   });
 }
 
-/** Сколько товаров кластера изменят категорию. */
+/** Сколько товаров кластера изменят категорию или название. */
 export function changedProductsCount(
   clusters: Iterable<CategoryCluster>,
   products: Map<number, Product>,
 ): number {
   let count = 0;
   for (const cluster of clusters) {
-    if (!cluster.targetCategoryId) continue;
     for (const productId of cluster.productIds) {
       const product = products.get(productId);
       if (!product) continue;
-      if (
+      const categoryChanged =
+        cluster.targetCategoryId &&
         (product.originalCategoryId ?? product.categoryId) !==
-        cluster.targetCategoryId
-      ) {
+          cluster.targetCategoryId;
+      const titleChanged =
+        product.goodsTitle !== (product.originalGoodsTitle ?? product.goodsTitle) ||
+        product.goodsTitleUk !==
+          (product.originalGoodsTitleUk ?? product.goodsTitleUk);
+      if (categoryChanged || titleChanged) {
         count++;
       }
     }
