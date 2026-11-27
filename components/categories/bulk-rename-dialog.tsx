@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Search01Icon } from "@hugeicons/core-free-icons";
+import {
+  ArrowDown01Icon,
+  ArrowUp01Icon,
+  Search01Icon,
+} from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +23,11 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
 import { useCategoryStore } from "@/lib/store/category-store";
 import { notify } from "@/lib/store/toast-store";
 import type { Product } from "@/lib/types";
@@ -196,13 +205,66 @@ export function BulkRenameDialog({
               aria-label="Текст для заміни"
               className="w-full"
             />
-            <p className="text-[11px] text-muted-foreground">
-              <span className="font-medium text-muted-foreground">Приклад:</span>
-              замініть <span className="font-mono">Нижня Білизна Жіноча</span>
-              на <span className="font-mono">Бюстгалтер</span> — рядок
-              <span className="font-mono">Нижня Білизна Жіноча Біла - CL1067125 - L - Білий</span>
-              стане <span className="font-mono">Бюстгалтер Біла - CL1067125 - L - Білий</span>.
-            </p>
+            <Collapsible>
+              <CollapsibleTrigger render={() => (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-left gap-2"
+                >
+                  <HugeiconsIcon
+                    icon={
+                      open ? ArrowUp01Icon : ArrowDown01Icon
+                    }
+                    data-icon="inline-start"
+                  />
+                  Приклади використання
+                </Button>
+              )} />
+              <CollapsibleContent className="mt-2 space-y-3 p-3 rounded-lg border bg-muted/50">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-foreground">
+                    1. Без регулярних виразів (проста заміна підстроки)
+                  </p>
+                  <div className="flex flex-col gap-1 text-sm">
+                    <div className="flex gap-2">
+                      <span className="w-24 text-muted-foreground">Замінити:</span>
+                      <span className="font-mono">Нижня Білизна Жіноча</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="w-24 text-muted-foreground">На рядок:</span>
+                      <span className="font-mono">Бюстгалтер</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="w-24 text-muted-foreground">Результат:</span>
+                      <span className="font-mono">Бюстгалтер Біла - CL1067125 - L - Білий</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-1 pt-2 border-t border-muted">
+                  <p className="text-xs font-medium text-foreground">
+                    2. З регулярним виразом (замінити слово після фрази)
+                  </p>
+                  <div className="flex flex-col gap-1 text-sm">
+                    <div className="flex gap-2">
+                      <span className="w-24 text-muted-foreground">Замінити:</span>
+                      <span className="font-mono">^Нижня Білизна Жіноча \S+</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="w-24 text-muted-foreground">На рядок:</span>
+                      <span className="font-mono">Бюстгалтер</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="w-24 text-muted-foreground">Результат:</span>
+                      <span className="font-mono">Бюстгалтер - CL1067125 - L - Білий</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Увімкніть чекбокс «Регулярне вираження»
+                    </p>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
             {regexError && (
               <p className="text-[11px] text-destructive">
                 {regexError}
