@@ -531,7 +531,7 @@ export function CategoryGroupDialog({
               </DropdownMenu>
             )}
             <div className="min-w-0 flex-1">
-              {editingTitle || editingRename || editingColor ? null : (
+              {editingTitle || editingRename ? null : (
                 <div className="text-sm font-medium truncate">
                   {cluster.title}
                 </div>
