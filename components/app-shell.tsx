@@ -54,8 +54,7 @@ import {
 import { PRODUCT_DRAG_TYPE, hasDragType, readDragIds } from "@/lib/dnd";
 import { formatUsd } from "@/lib/ai-cost";
 import { MAX_AI_CLEANUP_RUNS } from "@/lib/ai-limits";
-import { exportFinalXlsx } from "@/lib/export/final-xlsx";
-import { exportXlsx } from "@/lib/export/xlsx";
+import { exportUnifiedXlsx } from "@/lib/export/unified-xlsx";
 import { paginate } from "@/lib/pagination";
 import { groupsLabel, productsLabel } from "@/lib/plural";
 import {
@@ -456,21 +455,11 @@ export function AppShell() {
     if (!activeDataset) return;
     setIsExporting(true);
     try {
-      if (activeDataset.flow === "categories") {
-        await exportFinalXlsx(
-          [...products.values()],
-          [...groups.values()],
-          productToGroup,
-          activeDataset.name,
-        );
-      } else {
-        await exportXlsx(
-          [...products.values()],
-          [...groups.values()],
-          productToGroup,
-          activeDataset.name,
-        );
-      }
+      await exportUnifiedXlsx(
+        [...products.values()],
+        activeDataset.name,
+        { groups: [...groups.values()], productToGroup },
+      );
       notify("XLSX-файл сформовано", "success");
     } catch {
       notify("Не вдалося сформувати XLSX", "error");

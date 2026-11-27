@@ -54,7 +54,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { buildModelLinks } from "@/lib/category/links";
-import { exportCategoryChanges } from "@/lib/export/category-xlsx";
+import { exportUnifiedXlsx } from "@/lib/export/unified-xlsx";
 import { paginate, type PageSize } from "@/lib/pagination";
 import {
   categoriesLabel,
@@ -704,10 +704,10 @@ export function CategoryApp() {
     if (!activeDataset) return;
     setIsExporting(true);
     try {
-      const count = await exportCategoryChanges(
+      const count = await exportUnifiedXlsx(
         [...products.values()],
-        [...clusters.values()],
         activeDataset.name,
+        { clusters: [...clusters.values()] },
       );
       if (count === 0) notify("Немає змінених категорій для експорту", "error");
       else notify(`Експортовано змінених товарів: ${count}`, "success");
