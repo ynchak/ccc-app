@@ -492,46 +492,44 @@ export function CategoryGroupDialog({
 
         <div className="mt-4 flex flex-col gap-2 rounded-lg border bg-muted/20 p-3">
           <div className="flex items-start gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger>
-                <Button variant="outline" size="sm">
-                  <HugeiconsIcon icon={MoreHorizontalIcon} data-icon="inline-start" />
-                  Дії
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuGroup>
-                {!editingTitle && !editingRename && !editingColor && (
-                  <DropdownMenuItem
-                    onClick={handleStartEditTitle}
-                    disabled={isRenaming}
-                  >
-                    Змінити назву групи
-                  </DropdownMenuItem>
-                )}
-                {selectedProductIds.size > 0 && !editingTitle && !editingRename && !editingColor && (
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setDraftTitleRu(cluster.title);
-                      setDraftTitleUk(cluster.titleUk ?? "");
-                      setEditingRename(true);
-                    }}
-                    disabled={isRenaming}
-                  >
-                    Змінити назви
-                  </DropdownMenuItem>
-                )}
-                {!editingTitle && !editingRename && !editingColor && (
-                  <DropdownMenuItem
-                    onClick={handleStartEditColor}
-                    disabled={isRenaming || colorBlocks.length === 0}
-                  >
-                    Змінити кольори
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {!editingTitle && !editingRename && !editingColor && (
+              <DropdownMenu>
+                <DropdownMenuTrigger>
+                  <Button variant="outline" size="sm">
+                    <HugeiconsIcon icon={MoreHorizontalIcon} data-icon="inline-start" />
+                    Дії
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem
+                      onClick={handleStartEditTitle}
+                      disabled={isRenaming}
+                    >
+                      Змінити назву групи
+                    </DropdownMenuItem>
+                    {selectedProductIds.size > 0 && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setDraftTitleRu(cluster.title);
+                          setDraftTitleUk(cluster.titleUk ?? "");
+                          setEditingRename(true);
+                        }}
+                        disabled={isRenaming}
+                      >
+                        Змінити назви
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem
+                      onClick={handleStartEditColor}
+                      disabled={isRenaming || colorBlocks.length === 0}
+                    >
+                      Змінити кольори
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <div className="min-w-0 flex-1">
               {editingTitle || editingRename || editingColor ? null : (
                 <div className="text-sm font-medium truncate">
