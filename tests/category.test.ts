@@ -142,6 +142,8 @@ test("экспорт категорий берёт только изменённ
       categoryTitle: "Категория B",
       categoryId: "cat-b",
       titleChanged: false,
+      color: null,
+      colorChanged: false,
     },
   ]);
 });
@@ -169,6 +171,8 @@ test("экспорт категорий: если только название 
       categoryTitle: "",
       categoryId: "",
       titleChanged: true,
+      color: null,
+      colorChanged: false,
     },
   ]);
 });

@@ -29,6 +29,7 @@ import { productsLabel } from "@/lib/plural";
 import {
   clusterCategories,
   targetCategoryFor,
+  
   useCategoryStore,
 } from "@/lib/store/category-store";
 import type { CategoryCluster, CategoryRef, Product } from "@/lib/types";
@@ -237,10 +238,13 @@ export function CategoryGroupDialog({
   );
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingRename, setEditingRename] = useState(false);
+  const [editingColor, setEditingColor] = useState(false);
   const [draftTitleRu, setDraftTitleRu] = useState(cluster?.title ?? "");
   const [draftTitleUk, setDraftTitleUk] = useState(cluster?.titleUk ?? "");
+  const [draftColorByBlock, setDraftColorByBlock] = useState<Map<string, string>>(new Map());
   const [isRenaming, setIsRenaming] = useState(false);
   const renameCluster = useCategoryStore((state) => state.renameClusterProducts);
+  const updateClusterColorAction = (clusterId: number, color: string | null) => (useCategoryStore.getState() as any).updateClusterColor(clusterId, color);
   const colorBlocks = useMemo(() => splitProductsByColor(members), [members]);
   const showColorBlocks = colorBlocks.length > 1;
 
@@ -301,6 +305,63 @@ export function CategoryGroupDialog({
     setDraftTitleRu(cluster.title);
     setDraftTitleUk(cluster.titleUk ?? "");
   };
+
+  const handleStartEditColor = () => {
+    const next = new Map<string, string>();
+    for (const block of colorBlocks) {
+      const firstColor = block.products[0]?.color ?? "";
+      next.set(block.key || "no-color", firstColor);
+    }
+    setDraftColorByBlock(next);
+    setEditingColor(true);
+  };
+
+  const handleCancelEditColor = () => {
+    setEditingColor(false);
+    setDraftColorByBlock(new Map());
+  };
+
+  const handleChangeBlockColor = (blockKey: string, value: string) => {
+    setDraftColorByBlock((current) => {
+      const next = new Map(current);
+      next.set(blockKey, value.trim());
+      return next;
+    });
+  };
+
+  const handleSaveColor = useCallback(async () => {
+    if (!cluster) return;
+
+    const updates: Array<{ blockKey: string; color: string | null }> = [];
+    for (const [blockKey, color] of draftColorByBlock) {
+      updates.push({ blockKey, color: color || null });
+    }
+
+    const uniqueColors = new Set(updates.map((u) => u.color));
+    if (uniqueColors.size === 1 && uniqueColors.has(null)) {
+      setEditingColor(false);
+      setDraftColorByBlock(new Map());
+      return;
+    }
+
+    setIsRenaming(true);
+    try {
+      for (const { blockKey, color } of updates) {
+        const block = colorBlocks.find(
+          (b) => (b.key || "no-color") === blockKey,
+        );
+        if (!block) continue;
+        const ok = await updateClusterColorAction(cluster.id, color);
+        if (!ok) {
+          console.error("Не удалось изменить цвет для блока " + blockKey);
+        }
+      }
+      setEditingColor(false);
+      setDraftColorByBlock(new Map());
+    } finally {
+      setIsRenaming(false);
+    }
+  }, [cluster, draftColorByBlock, colorBlocks, updateClusterColorAction]);
 
   const handleSaveTitle = useCallback(async () => {
     if (!cluster) return;
@@ -527,6 +588,62 @@ export function CategoryGroupDialog({
             </div>
             <p className="text-[11px] text-muted-foreground">
               Зміни застосуються лише до вибраних товарів ({selectedProductIds.size}).
+            </p>
+          </div>
+        ) : null}
+
+        {editingColor ? (
+          <div className="mt-4 flex flex-col gap-2 rounded-lg border bg-muted/20 p-3">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span>Змінити кольори товарів</span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {colorBlocks.map((block) => (
+                <div
+                  key={block.key || 'no-color'}
+                  className="flex flex-col gap-2 p-3 rounded border border-muted"
+                >
+                  <div className="flex items-center gap-1 px-2 py-1 bg-muted/50 rounded">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      {block.isMissing ? 'Без кольору' : block.label}
+                    </span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">
+                      {block.products.length} товар{block.products.length === 1 ? '' : 'ів'}
+                    </span>
+                  </div>
+                  <Input
+                    value={draftColorByBlock.get(block.key || 'no-color') ?? ''}
+                    onChange={(event) =>
+                      handleChangeBlockColor(
+                        block.key || 'no-color',
+                        event.target.value,
+                      )
+                    }
+                    placeholder={block.label || ''}
+                    aria-label={'Колір для ' + (block.label || 'товари')}
+                    className="w-full text-xs"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelEditColor}
+                disabled={isRenaming}
+              >
+                Скасувати
+              </Button>
+              <Button
+                onClick={handleSaveColor}
+                disabled={isRenaming}
+              >
+                {isRenaming ? 'Зберігаю…' : 'Зберегти'}
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Зміна кольору застосується до всіх товарів кластера.
             </p>
           </div>
         ) : null}

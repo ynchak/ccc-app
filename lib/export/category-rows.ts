@@ -9,6 +9,10 @@ export interface CategoryExportRow {
   categoryId: string;
   /** Название изменилось относительно оригинала из CSV. */
   titleChanged: boolean;
+  /** Цвет товара (из поля color). */
+  color: string | null;
+  /** Цвет изменился относительно оригинала из CSV. */
+  colorChanged: boolean;
 }
 
 /**
@@ -37,8 +41,10 @@ export function buildCategoryChangeRows(
       const titleChanged =
         product.goodsTitle !== (product.originalGoodsTitle ?? product.goodsTitle) ||
         product.goodsTitleUk !== (product.originalGoodsTitleUk ?? product.goodsTitleUk);
+      const colorChanged =
+        product.color !== (product.originalColor ?? null);
 
-      if (!categoryChanged && !titleChanged) return [];
+      if (!categoryChanged && !titleChanged && !colorChanged) return [];
 
       return [
         {
@@ -54,6 +60,8 @@ export function buildCategoryChangeRows(
             ? cluster?.targetCategoryId ?? originalId
             : "",
           titleChanged,
+          color: product.color,
+          colorChanged,
         },
       ];
     });

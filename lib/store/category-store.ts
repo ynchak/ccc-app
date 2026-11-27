@@ -299,6 +299,10 @@ interface CategoryState {
       { goodsTitle: string; goodsTitleUk?: string }
     >,
   ) => Promise<boolean>;
+  updateClusterColor: (
+    clusterId: number,
+    color: string | null,
+  ) => Promise<boolean>;
   moveClustersToCategory: (
     clusterIds: number[],
     categoryId: string,
@@ -664,6 +668,45 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
       lastSavedAt: Date.now(),
     });
     recordUndo(before, "Категорію групи змінено");
+    return true;
+  },
+
+  /**
+   * Изменяет цвет товаров кластера. Обновляет поле color у всех товаров
+   * кластера. Заголовок кластера не меняется.
+   */
+  async updateClusterColor(clusterId: number, color: string | null) {
+    const state = get();
+    const cluster = state.clusters.get(clusterId);
+    if (!cluster) return false;
+
+    const beforeClusters = state.clusters;
+    const beforeProducts = state.products;
+
+    const nextProducts = new Map(state.products);
+    const updatedProducts: Product[] = [];
+    for (const productId of cluster.productIds) {
+      const product = nextProducts.get(productId);
+      if (!product) continue;
+      const updated: Product = {
+        ...product,
+        color: color,
+        colorSource: undefined,
+      };
+      nextProducts.set(productId, updated);
+      updatedProducts.push(updated);
+    }
+
+    if (updatedProducts.length === 0) return false;
+
+    await putProducts(updatedProducts);
+
+    set({
+      products: nextProducts,
+      lastSavedAt: Date.now(),
+    });
+
+    recordUndo(beforeClusters, "Змінено кольор товарів групи", beforeProducts);
     return true;
   },
 

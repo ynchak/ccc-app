@@ -88,6 +88,20 @@ export async function exportCategoryChanges(
         width: 18,
         cell: (row: CategoryExportRow) => ({ value: row.categoryId, ...border }),
       },
+      {
+        header: {
+          value: "Колір",
+          fontWeight: "bold",
+          backgroundColor: "#F4F4F5",
+          align: "center",
+          ...border,
+        },
+        width: 24,
+        cell: (row: CategoryExportRow) => ({
+          value: row.color ?? "",
+          ...border,
+        }),
+      },
     ],
   }).toFile(`${stripTableFileExtension(fileName)}-categories.xlsx`);
 

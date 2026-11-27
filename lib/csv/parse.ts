@@ -73,6 +73,8 @@ export function parseCsv(text: string): ParseResult {
       originalGoodsTitle: goodsTitle,
       goodsTitleUk,
       originalGoodsTitleUk: goodsTitleUk,
+      color: value("color") ?? null,
+      originalColor: value("color") ?? null,
       goodsArticle,
       goodsPrice: value("goodsPrice") ?? "",
       producersTitle: value("producersTitle") ?? "",
