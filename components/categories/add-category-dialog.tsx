@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useCategoryStore } from "@/lib/store/category-store";
 import { notify } from "@/lib/store/toast-store";
 
-/** Ручное добавление категории в справочник файла. */
+/** Ручное добавление категории в общий справочник сервиса. */
 export function AddCategoryDialog({
   open,
   onOpenChange,
@@ -25,6 +25,7 @@ export function AddCategoryDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const addCategory = useCategoryStore((state) => state.addCategory);
+  const dictionary = useCategoryStore((state) => state.dictionary);
   const [title, setTitle] = useState("");
   const [id, setId] = useState("");
 
@@ -34,12 +35,22 @@ export function AddCategoryDialog({
   };
 
   const handleSave = async () => {
-    const ok = await addCategory(id, title);
-    if (!ok) {
+    const result = await addCategory(id, title);
+    if (result === "invalid") {
       notify("Вкажіть назву та ID категорії", "error");
       return;
     }
-    notify("Категорію додано", "success");
+    if (result === "exists") {
+      const existing = dictionary.find((item) => item.id === id.trim());
+      notify(
+        existing
+          ? `Категорія вже є в довіднику: ${existing.title} (${existing.id})`
+          : "Категорія вже є в довіднику",
+        "error",
+      );
+      return;
+    }
+    notify("Категорію додано в довідник сервісу", "success");
     reset();
     onOpenChange(false);
   };
@@ -56,7 +67,8 @@ export function AddCategoryDialog({
         <DialogHeader>
           <DialogTitle>Нова категорія</DialogTitle>
           <DialogDescription>
-            ID потрібен для адмінки — він не генерується автоматично.
+            ID потрібен для адмінки — він не генерується автоматично. Категорія
+            зберігається в спільний довідник сервісу, а не лише в цьому файлі.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2">
@@ -77,7 +89,13 @@ export function AddCategoryDialog({
           />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              reset();
+              onOpenChange(false);
+            }}
+          >
             Скасувати
           </Button>
           <Button onClick={() => void handleSave()}>Додати</Button>

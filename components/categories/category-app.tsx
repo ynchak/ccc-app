@@ -67,6 +67,7 @@ import {
   clusterCategories,
   useCategoryCounters,
   useCategoryOptions,
+  useCategoryPickerOptions,
   useCategorySections,
   useCategoryStore,
   type CategorySection,
@@ -426,6 +427,7 @@ export function CategoryApp() {
   const sections = useCategorySections();
   const counters = useCategoryCounters();
   const categories = useCategoryOptions();
+  const pickerCategories = useCategoryPickerOptions();
   const categoryFilterOptions = useMemo(
     () =>
       sections
@@ -839,7 +841,6 @@ export function CategoryApp() {
               isExporting={isExporting}
               onTransition={handleTransition}
               isTransitioning={isTransitioning}
-              addCategoryDisabled={!activeDataset}
               onUndo={() => void handleUndo()}
               canUndo={canUndo}
               isUndoing={isUndoing}
@@ -1030,7 +1031,7 @@ export function CategoryApp() {
               ) : null}
             </span>
             <CategoryPicker
-              categories={categories}
+              categories={pickerCategories}
               value={bulkTargetId}
               onChange={setBulkTargetId}
               placeholder="— Перенести в категорію —"
@@ -1064,7 +1065,7 @@ export function CategoryApp() {
         }
         cluster={openedClusterData}
         products={products}
-        categories={categories}
+        categories={pickerCategories}
         links={
           openedClusterData
             ? modelLinks.get(openedClusterData.id) ?? []

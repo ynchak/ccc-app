@@ -74,10 +74,25 @@ export type DatasetStage = "categories" | "grouping";
 /** Откуда пришёл файл: обычная группировка или поток категорий. */
 export type DatasetFlow = "grouping" | "categories";
 
-/** Категория, добавленная вручную в справочник файла. */
+/**
+ * Категория справочника.
+ *
+ * `title` — единственное поле для отображения (`titleUk ?? titleRu ?? текст,
+ * введённый вручную`), варианты на двух языках нужны для мультиязычного поиска.
+ */
 export interface CategoryRef {
   id: string;
   title: string;
+  /** Название из categorise.json (category_title_ru). */
+  titleRu?: string;
+  /** Название из categorise.json (category_title_uk). */
+  titleUk?: string;
+}
+
+/** Запись глобального справочника категорий. */
+export interface CategoryEntry extends CategoryRef {
+  /** Служебное поле сида: правки пользователя переживают обновление json. */
+  source: "seed" | "user";
 }
 
 /** Импортированный файл. */

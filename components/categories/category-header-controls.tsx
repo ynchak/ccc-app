@@ -50,7 +50,6 @@ export function CategoryHeaderControls({
   isExporting,
   onTransition,
   isTransitioning,
-  addCategoryDisabled,
   onUndo,
   canUndo,
   isUndoing,
@@ -69,7 +68,6 @@ export function CategoryHeaderControls({
   isExporting: boolean;
   onTransition: () => void;
   isTransitioning: boolean;
-  addCategoryDisabled: boolean;
   onUndo: () => void;
   canUndo: boolean;
   isUndoing: boolean;
@@ -165,7 +163,7 @@ export function CategoryHeaderControls({
       <Button
         variant="outline"
         onClick={onAddCategory}
-        disabled={addCategoryDisabled}
+        title="Додати категорію в спільний довідник сервісу"
       >
         <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" />
         Категорія

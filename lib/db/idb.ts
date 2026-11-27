@@ -2,6 +2,7 @@ import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 
 import type {
   CategoryCluster,
+  CategoryEntry,
   Dataset,
   Group,
   NewCategoryCluster,
@@ -39,6 +40,11 @@ interface AppDB extends DBSchema {
     value: CategoryCluster;
     indexes: { "by-dataset": number };
   };
+  /** Глобальный справочник категорий — не привязан к файлам. */
+  categories: {
+    key: string;
+    value: CategoryEntry;
+  };
   settings: {
     key: string;
     value: { key: string; value: unknown };
@@ -59,7 +65,7 @@ interface AppDB extends DBSchema {
 }
 
 const DB_NAME = "ccc-groups";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let dbPromise: Promise<IDBPDatabase<AppDB>> | null = null;
 
@@ -101,6 +107,12 @@ function getDb(): Promise<IDBPDatabase<AppDB>> {
             autoIncrement: true,
           });
           clusters.createIndex("by-dataset", "datasetId");
+        }
+
+        if (oldVersion < 4) {
+          // Справочник категорий общий для всего сервиса, ключ — строковый
+          // goods_category_id.
+          db.createObjectStore("categories", { keyPath: "id" });
         }
       },
     });
@@ -216,6 +228,27 @@ export async function deleteCategoryClusters(ids: number[]): Promise<void> {
   const tx = db.transaction("categoryClusters", "readwrite");
   await Promise.all(ids.map((id) => tx.store.delete(id)));
   await tx.done;
+}
+
+/** Читает весь глобальный справочник категорий. */
+export async function loadCategories(): Promise<CategoryEntry[]> {
+  const db = await getDb();
+  return db.getAll("categories");
+}
+
+/** Записывает категории справочника одной транзакцией. */
+export async function putCategories(entries: CategoryEntry[]): Promise<void> {
+  if (entries.length === 0) return;
+  const db = await getDb();
+  const tx = db.transaction("categories", "readwrite");
+  await Promise.all(entries.map((entry) => tx.store.put(entry)));
+  await tx.done;
+}
+
+/** Записывает одну категорию справочника. */
+export async function saveCategory(entry: CategoryEntry): Promise<void> {
+  const db = await getDb();
+  await db.put("categories", entry);
 }
 
 /** Записывает изменённый датасет. */

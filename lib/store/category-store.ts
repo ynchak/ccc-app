@@ -5,17 +5,21 @@ import { create } from "zustand";
 
 import { parseCategoryCsv } from "@/lib/csv/import-worker";
 import { groupProducts } from "@/lib/csv/group";
+import { compareCategories } from "@/lib/category/dictionary";
+import { seedCategories } from "@/lib/category/seed";
 import {
   addCategoryClusters,
   deleteCategoryClusters,
   deleteDataset as dbDeleteDataset,
   getSetting,
+  loadCategories,
   loadCategoryClusters,
   loadDatasets,
   loadProducts,
   putCategoryClusters,
   putDataset,
   putGroups,
+  saveCategory,
   saveDataset,
   setSetting,
   updateDatasetClusterCount,
@@ -36,6 +40,7 @@ import {
 } from "@/lib/pagination";
 import type {
   CategoryCluster,
+  CategoryEntry,
   CategoryRef,
   Dataset,
   NewCategoryCluster,
@@ -210,9 +215,14 @@ function resetState() {
   };
 }
 
+/** Результат добавления категории в общий справочник. */
+export type CategoryAddResult = "ok" | "exists" | "invalid";
+
 interface CategoryState {
   datasets: Dataset[];
   activeDatasetId: number | null;
+  /** Глобальный справочник категорий — общий для всего сервиса. */
+  dictionary: CategoryEntry[];
 
   products: Map<number, Product>;
   clusters: Map<number, CategoryCluster>;
@@ -239,7 +249,7 @@ interface CategoryState {
   ) => Promise<{ datasetId: number; clusterCount: number }>;
   removeDataset: (datasetId: number) => Promise<void>;
   renameDataset: (datasetId: number, name: string) => Promise<boolean>;
-  addCategory: (id: string, title: string) => Promise<boolean>;
+  addCategory: (id: string, title: string) => Promise<CategoryAddResult>;
 
   setSearch: (value: string) => void;
   setQuickFilter: (value: CategoryQuickFilter) => void;
@@ -295,6 +305,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
   return {
   datasets: [],
   activeDatasetId: null,
+  dictionary: [],
   products: new Map(),
   clusters: new Map(),
   orderedClusterIds: [],
@@ -315,8 +326,15 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
     if (isCardWidth(storedCardSize)) {
       set({ cardSize: storedCardSize });
     }
-    const datasets = (await loadDatasets()).filter(isCategoryDataset);
-    set({ datasets });
+
+    // Справочник категорий общий для всего сервиса, поэтому при загрузке
+    // страницы он сверяется с categorise.json и читается из IndexedDB.
+    const [allDatasets, dictionary] = await Promise.all([
+      loadDatasets(),
+      seedCategories().then(() => loadCategories()),
+    ]);
+    const datasets = allDatasets.filter(isCategoryDataset);
+    set({ datasets, dictionary: [...dictionary].sort(compareCategories) });
     if (datasets.length === 0) return;
 
     const storedId = await getSetting<number>(CATEGORY_ACTIVE_DATASET_KEY);
@@ -494,31 +512,30 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
     return true;
   },
 
+  /**
+   * Добавляет категорию в общий справочник сервиса — она не привязана к файлу
+   * и будет доступна везде.
+   */
   async addCategory(id, title) {
-    const datasetId = get().activeDatasetId;
-    if (datasetId === null) return false;
     const categoryId = id.trim();
     const categoryTitle = title.trim();
-    if (!categoryId || !categoryTitle) return false;
+    if (!categoryId || !categoryTitle) return "invalid";
 
-    const dataset = get().datasets.find((item) => item.id === datasetId);
-    if (!dataset) return false;
-    const existing = dataset.extraCategories ?? [];
-    const next = existing.some((category) => category.id === categoryId)
-      ? existing.map((category) =>
-          category.id === categoryId
-            ? { id: categoryId, title: categoryTitle }
-            : category,
-        )
-      : [...existing, { id: categoryId, title: categoryTitle }];
-    const updated = { ...dataset, extraCategories: next };
-    await putDataset(updated);
+    const state = get();
+    if (state.dictionary.some((item) => item.id === categoryId)) {
+      return "exists";
+    }
+
+    const entry: CategoryEntry = {
+      id: categoryId,
+      title: categoryTitle,
+      source: "user",
+    };
+    await saveCategory(entry);
     set({
-      datasets: get().datasets.map((item) =>
-        item.id === datasetId ? updated : item,
-      ),
+      dictionary: [...state.dictionary, entry].sort(compareCategories),
     });
-    return true;
+    return "ok";
   },
 
   setSearch(value) {
@@ -1193,4 +1210,22 @@ export function useCategoryOptions(): CategoryRef[] {
       a.title.localeCompare(b.title, "uk"),
     );
   }, [activeDatasetId, datasets, products]);
+}
+
+/**
+ * Категории для выбора целевой категории: общий справочник сервиса плюс
+ * категории, которых нет в справочнике, но есть в текущем файле.
+ */
+export function useCategoryPickerOptions(): CategoryRef[] {
+  const dictionary = useCategoryStore((s) => s.dictionary);
+  const options = useCategoryOptions();
+
+  return useMemo(() => {
+    const map = new Map<string, CategoryRef>();
+    for (const category of dictionary) map.set(category.id, category);
+    for (const category of options) {
+      if (!map.has(category.id)) map.set(category.id, category);
+    }
+    return [...map.values()].sort(compareCategories);
+  }, [dictionary, options]);
 }

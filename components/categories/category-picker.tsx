@@ -11,6 +11,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { matchesCategoryQuery } from "@/lib/category/dictionary";
 import type { CategoryRef } from "@/lib/types";
 
 /** Выбор категории с поиском по названию и ID. */
@@ -33,12 +34,9 @@ export function CategoryPicker({
   const [query, setQuery] = useState("");
   const selected = categories.find((category) => category.id === value);
   const filtered = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return categories;
-    return categories.filter(
-      (category) =>
-        category.title.toLowerCase().includes(normalized) ||
-        category.id.toLowerCase().includes(normalized),
+    if (!query.trim()) return categories;
+    return categories.filter((category) =>
+      matchesCategoryQuery(category, query),
     );
   }, [categories, query]);
 
@@ -104,7 +102,7 @@ export function CategoryPicker({
                     setOpen(false);
                   }
                 }}
-                placeholder="Пошук за назвою або ID…"
+                placeholder="Пошук за назвою (uk/ru) або ID…"
                 aria-label="Пошук категорії"
                 className="pl-7"
               />
