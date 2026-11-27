@@ -14,6 +14,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { useCategoryStore } from "@/lib/store/category-store";
 import { notify } from "@/lib/store/toast-store";
 import type { Product } from "@/lib/types";
@@ -139,7 +144,43 @@ export function BulkRenameDialog({
 
         <div className="space-y-4 p-4">
           <div className="space-y-2">
-            <Label htmlFor="find-text">Замінити рядок</Label>
+            <Tooltip>
+              <TooltipTrigger>
+                <Label htmlFor="find-text">Замінити рядок</Label>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <div className="space-y-1.5 text-xs">
+                  <p className="font-medium text-foreground">Підказка:</p>
+                  <p className="text-muted-foreground">
+                    Без регулярних виразів:
+                  </p>
+                  <p className="text-muted-foreground">
+                    Замінити рядок: <span className="font-mono">Нижня Білизна Жіноча</span>
+                  </p>
+                  <p className="text-muted-foreground">
+                    На рядок: <span className="font-mono">Бюстгалтер</span>
+                  </p>
+                  <p className="text-muted-foreground">
+                    Результат: <span className="font-mono">Бюстгалтер Біла - CL1067125 - L - Білий</span>
+                  </p>
+                  <p className="text-muted-foreground">
+                    З регулярним виразом:
+                  </p>
+                  <p className="text-muted-foreground">
+                    Замінити рядок: <span className="font-mono">^Нижня Білизна Жіноча \S+</span>
+                  </p>
+                  <p className="text-muted-foreground">
+                    На рядок: <span className="font-mono">Бюстгалтер</span>
+                  </p>
+                  <p className="text-muted-foreground">
+                    Результат: <span className="font-mono">Бюстгалтер - CL1067125 - L - Білий</span>
+                  </p>
+                  <p className="text-muted-foreground text-[10px]">
+                    Увімкніть «Регулярне вираження» для другого прикладу.
+                  </p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
             <Input
               id="find-text"
               value={findText}
