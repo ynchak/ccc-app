@@ -45,11 +45,14 @@ export function buildCategoryChangeRows(
           id: product.goodsId,
           goodsTitle: product.goodsTitle,
           goodsTitleUk: product.goodsTitleUk,
-          categoryTitle:
-            cluster?.targetCategoryTitle ||
-            product.categoryTitle ||
-            "Без категорії",
-          categoryId: cluster?.targetCategoryId ?? originalId,
+          categoryTitle: categoryChanged
+            ? (cluster?.targetCategoryTitle ||
+                product.categoryTitle ||
+                "Без категорії")
+            : "",
+          categoryId: categoryChanged
+            ? cluster?.targetCategoryId ?? originalId
+            : "",
           titleChanged,
         },
       ];
