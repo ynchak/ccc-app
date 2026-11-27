@@ -22,6 +22,7 @@ import {
   saveCategory,
   saveDataset,
   setSetting,
+  deleteCategories,
   updateDatasetClusterCount,
 } from "@/lib/db/idb";
 import { datasetNameFromProducts } from "@/lib/dataset-name";
@@ -250,6 +251,8 @@ interface CategoryState {
   removeDataset: (datasetId: number) => Promise<void>;
   renameDataset: (datasetId: number, name: string) => Promise<boolean>;
   addCategory: (id: string, title: string) => Promise<CategoryAddResult>;
+  /** Удаляет все категории, добавленные пользователем вручную. */
+  clearUserCategories: () => Promise<number>;
 
   setSearch: (value: string) => void;
   setQuickFilter: (value: CategoryQuickFilter) => void;
@@ -536,6 +539,19 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
       dictionary: [...state.dictionary, entry].sort(compareCategories),
     });
     return "ok";
+  },
+
+  async clearUserCategories() {
+    const state = get();
+    const userEntries = state.dictionary.filter(
+      (item) => item.source === "user",
+    );
+    if (userEntries.length === 0) return 0;
+    await deleteCategories(userEntries.map((item) => item.id));
+    set({
+      dictionary: state.dictionary.filter((item) => item.source !== "user"),
+    });
+    return userEntries.length;
   },
 
   setSearch(value) {

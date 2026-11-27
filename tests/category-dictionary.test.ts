@@ -126,3 +126,56 @@ test("справочник: добавление категории общее �
   assert.equal(reloaded?.title, "Нова категорія");
   assert.equal(reloaded?.source, "user");
 });
+
+test("справочник: очистка пользовательских категорий не задевает сид", async () => {
+  const { useCategoryStore } = await import("@/lib/store/category-store");
+  await useCategoryStore.getState().init();
+  const { loadCategories } = await import("@/lib/db/idb");
+
+  const beforeSeed = (await loadCategories()).filter(
+    (entry) => entry.source === "seed",
+  ).length;
+  const beforeUser = useCategoryStore
+    .getState()
+    .dictionary.filter((entry) => entry.source === "user").length;
+
+  assert.equal(
+    await useCategoryStore.getState().addCategory("997001", "Моя категорія 1"),
+    "ok",
+  );
+  assert.equal(
+    await useCategoryStore.getState().addCategory("997002", "Моя категорія 2"),
+    "ok",
+  );
+
+  const deleted = await useCategoryStore.getState().clearUserCategories();
+  assert.equal(
+    deleted,
+    beforeUser + 2,
+    "должны быть удалены все пользовательские категории, включая только что добавленные",
+  );
+
+  const state = useCategoryStore.getState();
+  assert.ok(
+    !state.dictionary.some((entry) => entry.source === "user"),
+    "у сторі не повинно залишитися користувацьких категорій",
+  );
+  assert.equal(
+    state.dictionary.filter((entry) => entry.source === "seed").length,
+    beforeSeed,
+    "категории из сида остались нетронутыми",
+  );
+
+  const stored = await loadCategories();
+  assert.ok(
+    !stored.some((entry) => entry.source === "user"),
+    "в IndexedDB не должно остаться пользовательских категорий",
+  );
+  assert.equal(
+    stored.filter((entry) => entry.source === "seed").length,
+    beforeSeed,
+  );
+
+  // Повторный вызов — ничего не удаляет.
+  assert.equal(await useCategoryStore.getState().clearUserCategories(), 0);
+});

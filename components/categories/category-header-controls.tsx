@@ -4,6 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
   Cancel01Icon,
+  Delete02Icon,
   Download01Icon,
   FileImportIcon,
   FilterIcon,
@@ -53,6 +54,8 @@ export function CategoryHeaderControls({
   onUndo,
   canUndo,
   isUndoing,
+  onClearUserCategories,
+  canClearUserCategories,
   categories,
   categoryFilter,
   onCategoryFilterChange,
@@ -71,6 +74,8 @@ export function CategoryHeaderControls({
   onUndo: () => void;
   canUndo: boolean;
   isUndoing: boolean;
+  onClearUserCategories: () => void;
+  canClearUserCategories: boolean;
   categories: (CategoryRef & { count?: number })[];
   categoryFilter: string | null;
   onCategoryFilterChange: (value: string | null) => void;
@@ -168,6 +173,18 @@ export function CategoryHeaderControls({
         <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" />
         Категорія
       </Button>
+
+      {canClearUserCategories ? (
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={onClearUserCategories}
+          title="Очистити додані вами категорії"
+          aria-label="Очистити додані вами категорії"
+        >
+          <HugeiconsIcon icon={Delete02Icon} className="size-4" />
+        </Button>
+      ) : null}
 
       <Button variant="outline" onClick={onUndo} disabled={!canUndo || isUndoing}>
         <HugeiconsIcon icon={Undo02Icon} data-icon="inline-start" />

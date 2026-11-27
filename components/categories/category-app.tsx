@@ -423,6 +423,10 @@ export function CategoryApp() {
   );
   const removeDataset = useCategoryStore((state) => state.removeDataset);
   const isLoading = useCategoryStore((state) => state.isLoading);
+  const dictionary = useCategoryStore((state) => state.dictionary);
+  const clearUserCategories = useCategoryStore(
+    (state) => state.clearUserCategories,
+  );
 
   const sections = useCategorySections();
   const counters = useCategoryCounters();
@@ -450,6 +454,7 @@ export function CategoryApp() {
   const [addCategoryOpen, setAddCategoryOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Dataset | null>(null);
   const [transitionOpen, setTransitionOpen] = useState(false);
+  const [clearUserCategoriesOpen, setClearUserCategoriesOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isUndoing, setIsUndoing] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -611,6 +616,8 @@ export function CategoryApp() {
   const activeDataset = datasets.find((item) => item.id === activeDatasetId) ?? null;
   const query = search.trim().toLowerCase();
 
+  const userCategories = dictionary.filter((item) => item.source === "user");
+
   const filteredSections = useMemo(() => {
     const base = categoryFilter
       ? sections.filter((section) => section.id === categoryFilter)
@@ -743,6 +750,16 @@ export function CategoryApp() {
     void runTransition();
   };
 
+  const handleClearUserCategories = async () => {
+    const count = await clearUserCategories();
+    setClearUserCategoriesOpen(false);
+    if (count > 0) {
+      notify(`Видалено доданих вами категорій: ${count}`, "success");
+    } else {
+      notify("Немає доданих вами категорій для очищення", "default");
+    }
+  };
+
   const handleBulkMove = async () => {
     if (!bulkTargetId || selectedClusterIds.size === 0) return;
     // Ищем в списке для выбора: туда входит и общий справочник, поэтому
@@ -852,6 +869,8 @@ export function CategoryApp() {
               categories={categoryFilterOptions}
               categoryFilter={categoryFilter}
               onCategoryFilterChange={setCategoryFilter}
+              onClearUserCategories={() => setClearUserCategoriesOpen(true)}
+              canClearUserCategories={userCategories.length > 0}
             />
           }
           subheader={
@@ -1159,6 +1178,28 @@ export function CategoryApp() {
               }}
             >
               Перейти все одно
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={clearUserCategoriesOpen}
+        onOpenChange={setClearUserCategoriesOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Очистити додані категорії?</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogDescription>
+            Будуть видалені лише категорії, які ви додали вручну (разом:
+            {userCategories.length}). Категорії з загального справочника
+            сервісу не зачіпаються. Дію не можна скасувати.
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Скасувати</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleClearUserCategories}>
+              Очистити
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -251,6 +251,15 @@ export async function saveCategory(entry: CategoryEntry): Promise<void> {
   await db.put("categories", entry);
 }
 
+/** Удаляет категории справочника по id. */
+export async function deleteCategories(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const db = await getDb();
+  const tx = db.transaction("categories", "readwrite");
+  await Promise.all(ids.map((id) => tx.store.delete(id)));
+  await tx.done;
+}
+
 /** Записывает изменённый датасет. */
 export async function putDataset(dataset: Dataset): Promise<void> {
   const db = await getDb();
