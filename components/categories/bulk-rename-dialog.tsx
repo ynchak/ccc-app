@@ -196,6 +196,13 @@ export function BulkRenameDialog({
               aria-label="Текст для заміни"
               className="w-full"
             />
+            <p className="text-[11px] text-muted-foreground">
+              <span className="font-medium text-muted-foreground">Приклад:</span>
+              замініть <span className="font-mono">Нижня Білизна Жіноча</span>
+              на <span className="font-mono">Бюстгалтер</span> — рядок
+              <span className="font-mono">Нижня Білизна Жіноча Біла - CL1067125 - L - Білий</span>
+              стане <span className="font-mono">Бюстгалтер Біла - CL1067125 - L - Білий</span>.
+            </p>
             {regexError && (
               <p className="text-[11px] text-destructive">
                 {regexError}
