@@ -717,20 +717,34 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
         updatedProducts.push(updated);
       }
     } else {
-      const replacements = computeWordReplacements(
+      const ruReplacements = computeWordReplacements(
         cluster.title,
         clusterTitleRu,
       );
-      if (replacements.length === 0 && (!clusterTitleUk || clusterTitleUk === cluster.titleUk)) {
+      const ukReplacements = cluster.titleUk && clusterTitleUk
+        ? computeWordReplacements(cluster.titleUk, clusterTitleUk)
+        : [];
+
+      if (
+        ruReplacements.length === 0 &&
+        (!clusterTitleUk || clusterTitleUk === cluster.titleUk)
+      ) {
         return false;
       }
+
       for (const productId of cluster.productIds) {
         const product = nextProducts.get(productId);
         if (!product) continue;
         const updated: Product = {
           ...product,
-          goodsTitle: applyReplacementsToTitle(product.goodsTitle, replacements),
-          goodsTitleUk: applyReplacementsToTitle(product.goodsTitleUk, replacements),
+          goodsTitle: applyReplacementsToTitle(
+            product.goodsTitle,
+            ruReplacements,
+          ),
+          goodsTitleUk: applyReplacementsToTitle(
+            product.goodsTitleUk,
+            ukReplacements,
+          ),
         };
         nextProducts.set(productId, updated);
         updatedProducts.push(updated);
