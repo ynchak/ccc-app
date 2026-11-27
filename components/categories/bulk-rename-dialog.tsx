@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 
@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useCategoryStore } from "@/lib/store/category-store";
+import { notify } from "@/lib/store/toast-store";
 import type { Product } from "@/lib/types";
 
 interface BulkRenameDialogProps {
@@ -44,7 +45,7 @@ export function BulkRenameDialog({
   const [isRenaming, setIsRenaming] = useState(false);
 
   // Валідація регулярного виразу
-  useMemo(() => {
+  useEffect(() => {
     if (!useRegex || !findText) {
       setRegexError(null);
       return;
@@ -82,11 +83,15 @@ export function BulkRenameDialog({
         const hasRu =
           titleRu &&
           product.goodsTitle &&
-          (useRegex && regex ? regex.test(product.goodsTitle) : product.goodsTitle.includes(findText));
+          (useRegex && regex
+            ? regex.test(product.goodsTitle)
+            : product.goodsTitle.includes(findText));
         const hasUk =
           titleUk &&
           product.goodsTitleUk &&
-          (useRegex && regex ? regex.test(product.goodsTitleUk) : product.goodsTitleUk.includes(findText));
+          (useRegex && regex
+            ? regex.test(product.goodsTitleUk)
+            : product.goodsTitleUk.includes(findText));
         if (hasRu || hasUk) count++;
       }
     }
@@ -103,11 +108,19 @@ export function BulkRenameDialog({
         titleUk,
         useRegex,
       });
+      onOpenChange(false);
+      setFindText("");
+      setReplaceText("");
       if (count > 0) {
-        onOpenChange(false);
-        setFindText("");
-        setReplaceText("");
+        notify(`Оновлено товарів: ${count}`, "success");
+      } else {
+        notify("Не знайдено жодного товару для змін", "error");
       }
+    } catch (error) {
+      notify(
+        error instanceof Error ? error.message : "Помилка при перейменуванні",
+        "error",
+      );
     } finally {
       setIsRenaming(false);
     }
