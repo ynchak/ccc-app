@@ -19,12 +19,17 @@ import {
   putCategoryClusters,
   putDataset,
   putGroups,
+  putProducts,
   saveCategory,
   saveDataset,
   setSetting,
   deleteCategories,
   updateDatasetClusterCount,
 } from "@/lib/db/idb";
+import {
+  applyReplacementsToTitle,
+  computeWordReplacements,
+} from "@/lib/title-rename";
 import { datasetNameFromProducts } from "@/lib/dataset-name";
 import { stripTableFileExtension } from "@/lib/file-name";
 import { defaultGroupTitle } from "@/lib/grouping/cluster";
@@ -60,6 +65,7 @@ interface CategoryUndoEntry {
   label: string;
   datasetId: number;
   clusters: CategoryCluster[];
+  products?: Product[];
 }
 
 /** Стабильный порядок товаров в группе — как в исходном файле. */
@@ -273,6 +279,15 @@ interface CategoryState {
     categoryId: string | null,
     categoryTitle: string | null,
   ) => Promise<boolean>;
+  renameClusterProducts: (
+    clusterId: number,
+    clusterTitleRu: string,
+    clusterTitleUk?: string,
+    productUpdates?: Map<
+      number,
+      { goodsTitle: string; goodsTitleUk?: string }
+    >,
+  ) => Promise<boolean>;
   moveClustersToCategory: (
     clusterIds: number[],
     categoryId: string,
@@ -290,6 +305,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
   const recordUndo = (
     before: Map<number, CategoryCluster>,
     label: string,
+    beforeProducts?: Map<number, Product>,
   ) => {
     const state = get();
     if (state.activeDatasetId === null) return;
@@ -300,6 +316,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
           label,
           datasetId: state.activeDatasetId,
           clusters: [...before.values()],
+          products: beforeProducts ? [...beforeProducts.values()] : undefined,
         },
       ].slice(-UNDO_LIMIT),
     });
@@ -430,6 +447,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
         (cluster) => ({
           number: cluster.number,
           title: cluster.title,
+          titleUk: cluster.titleUk,
           order: cluster.order,
           productIds: cluster.memberIndexes
             .map((index) => productIdByOrder.get(parsed.products[index].order))
@@ -635,6 +653,93 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
       lastSavedAt: Date.now(),
     });
     recordUndo(before, "Категорію групи змінено");
+    return true;
+  },
+
+  /**
+   * Переименовывает название кластера (RU + UA) и применяет замену ко всем
+   * товарам кластера (поля goodsTitle и goodsTitleUk).
+   *
+   * Если передан `productUpdates`, используются именно эти значения для
+   * указанных товаров (ручная правка в превью). Иначе вычисляется замена по
+   * индексам слов между старым и новым названием группы.
+   * Заголовок кластера тоже обновляется.
+   */
+  async renameClusterProducts(
+    clusterId: number,
+    clusterTitleRu: string,
+    clusterTitleUk?: string,
+    productUpdates?: Map<
+      number,
+      { goodsTitle: string; goodsTitleUk?: string }
+    >,
+  ) {
+    const state = get();
+    const cluster = state.clusters.get(clusterId);
+    if (!cluster) return false;
+
+    const beforeClusters = state.clusters;
+    const beforeProducts = state.products;
+
+    const nextClusters = new Map(state.clusters);
+    const updatedCluster: CategoryCluster = {
+      ...cluster,
+      title: clusterTitleRu,
+      titleUk: clusterTitleUk ?? undefined,
+      manual: true,
+    };
+    nextClusters.set(clusterId, updatedCluster);
+
+    const nextProducts = new Map(state.products);
+    const updatedProducts: Product[] = [];
+
+    if (productUpdates) {
+      for (const [productId, updates] of productUpdates) {
+        const product = nextProducts.get(productId);
+        if (!product) continue;
+        const updated: Product = {
+          ...product,
+          goodsTitle: updates.goodsTitle,
+          goodsTitleUk: updates.goodsTitleUk ?? undefined,
+        };
+        nextProducts.set(productId, updated);
+        updatedProducts.push(updated);
+      }
+    } else {
+      const replacements = computeWordReplacements(
+        cluster.title,
+        clusterTitleRu,
+      );
+      if (replacements.length === 0 && (!clusterTitleUk || clusterTitleUk === cluster.titleUk)) {
+        return false;
+      }
+      for (const productId of cluster.productIds) {
+        const product = nextProducts.get(productId);
+        if (!product) continue;
+        const updated: Product = {
+          ...product,
+          goodsTitle: applyReplacementsToTitle(product.goodsTitle, replacements),
+          goodsTitleUk: applyReplacementsToTitle(product.goodsTitleUk, replacements),
+        };
+        nextProducts.set(productId, updated);
+        updatedProducts.push(updated);
+      }
+    }
+
+    if (updatedProducts.length === 0) {
+      return false;
+    }
+
+    await putProducts(updatedProducts);
+    await putCategoryClusters([updatedCluster]);
+
+    set({
+      clusters: nextClusters,
+      products: nextProducts,
+      lastSavedAt: Date.now(),
+    });
+
+    recordUndo(beforeClusters, "Перейменовано товари групи", beforeProducts);
     return true;
   },
 
@@ -880,32 +985,42 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
     const entry = state.undoStack[state.undoStack.length - 1];
     if (!entry || entry.datasetId !== state.activeDatasetId) return false;
 
-    const restored = new Map(
+    const restoredClusters = new Map(
       entry.clusters.map((cluster) => [cluster.id, cluster]),
     );
-    const addedIds = [...state.clusters.keys()].filter(
-      (id) => !restored.has(id),
+    const addedClusterIds = [...state.clusters.keys()].filter(
+      (id) => !restoredClusters.has(id),
     );
 
-    await putCategoryClusters([...restored.values()]);
-    await deleteCategoryClusters(addedIds);
+    await putCategoryClusters([...restoredClusters.values()]);
+    await deleteCategoryClusters(addedClusterIds);
+
+    if (entry.products) {
+      const restoredProducts = new Map(
+        entry.products.map((product) => [product.id, product]),
+      );
+      await putProducts([...restoredProducts.values()]);
+      set({
+        products: restoredProducts,
+      });
+    }
 
     set({
-      clusters: restored,
-      orderedClusterIds: [...restored.values()]
+      clusters: restoredClusters,
+      orderedClusterIds: [...restoredClusters.values()]
         .sort((a, b) => a.order - b.order)
         .map((cluster) => cluster.id),
       datasets: withClusterCount(
         state.datasets,
         entry.datasetId,
-        restored.size,
+        restoredClusters.size,
       ),
       selectedClusterIds: new Set(),
       selectedProductIds: new Set(),
       undoStack: state.undoStack.slice(0, -1),
       lastSavedAt: Date.now(),
     });
-    await updateDatasetClusterCount(entry.datasetId, restored.size);
+    await updateDatasetClusterCount(entry.datasetId, restoredClusters.size);
     return true;
   },
 

@@ -3,6 +3,8 @@ import type { Group, Product } from "@/lib/types";
 /** Строка финального экспорта после потока категорий. */
 export interface FinalExportRow {
   id: string;
+  goodsTitle: string;
+  goodsTitleUk?: string;
   categoryTitle: string;
   categoryId: string;
   groupTitle: string;
@@ -25,6 +27,8 @@ export function buildFinalExportRows(
       const group = groupId !== undefined ? groupById.get(groupId) : undefined;
       return {
         id: product.goodsId,
+        goodsTitle: product.goodsTitle,
+        goodsTitleUk: product.goodsTitleUk,
         categoryTitle: product.categoryTitle,
         categoryId: product.categoryId,
         groupTitle: group?.title ?? "",

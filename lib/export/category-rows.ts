@@ -3,6 +3,8 @@ import type { CategoryCluster, Product } from "@/lib/types";
 /** Строка экспорта изменённых категорий. */
 export interface CategoryExportRow {
   id: string;
+  goodsTitle: string;
+  goodsTitleUk?: string;
   categoryTitle: string;
   categoryId: string;
 }
@@ -32,6 +34,8 @@ export function buildCategoryChangeRows(
       return [
         {
           id: product.goodsId,
+          goodsTitle: product.goodsTitle,
+          goodsTitleUk: product.goodsTitleUk,
           categoryTitle:
             cluster.targetCategoryTitle ||
             product.categoryTitle ||

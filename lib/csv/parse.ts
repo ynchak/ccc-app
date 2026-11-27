@@ -64,11 +64,13 @@ export function parseCsv(text: string): ParseResult {
     const goodsTitle = unescapeTitle(
       value("goodsTitle") ?? (goodsArticle || goodsId),
     );
+    const goodsTitleUk = unescapeTitle(value("goodsTitleUk") ?? goodsTitle);
 
     products.push({
       order: products.length,
       goodsId,
       goodsTitle,
+      goodsTitleUk,
       goodsArticle,
       goodsPrice: value("goodsPrice") ?? "",
       producersTitle: value("producersTitle") ?? "",

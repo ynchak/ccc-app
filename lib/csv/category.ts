@@ -7,6 +7,8 @@ export interface ParsedCategoryCluster {
   /** Индексы товаров в массиве products. */
   memberIndexes: number[];
   title: string;
+  /** Название кластера на українській (из goods_title_uk первого товара). */
+  titleUk?: string;
   order: number;
   number: number;
 }
@@ -49,6 +51,7 @@ export function parseCategoryCsvText(text: string): ParsedCategoryCsv {
     return {
       memberIndexes: cluster.memberIndexes,
       title: defaultGroupTitle(first),
+      titleUk: first.goodsTitleUk || undefined,
       order: index,
       number: index + 1,
     };

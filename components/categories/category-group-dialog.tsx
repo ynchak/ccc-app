@@ -1,8 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Link01Icon, Scissor01Icon } from "@hugeicons/core-free-icons";
+import {
+  ArrowDown01Icon,
+  ArrowRight01Icon,
+  Edit02Icon,
+  Link01Icon,
+  Scissor01Icon,
+} from "@hugeicons/core-free-icons";
 
 import { ProductCard } from "@/components/groups/product-card";
 import { Badge } from "@/components/ui/badge";
@@ -14,13 +20,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { cardGridStyle, type CardWidth } from "@/lib/card-size";
 import { CategoryPicker } from "@/components/categories/category-picker";
+import { splitProductsByColor, type ColorBlock } from "@/lib/category/color-blocks";
 import type { ModelLink } from "@/lib/category/links";
 import { productsLabel } from "@/lib/plural";
 import {
   clusterCategories,
   targetCategoryFor,
+  useCategoryStore,
 } from "@/lib/store/category-store";
 import type { CategoryCluster, CategoryRef, Product } from "@/lib/types";
 
@@ -102,6 +111,80 @@ function ModelLinkCard({
   );
 }
 
+/** Заголовок и содержимое одного цветового подблока внутри группы. */
+function ColorBlockSection({
+  block,
+  collapsed,
+  selectedProductIds,
+  onToggleCollapse,
+  onToggleProduct,
+  onToggleBlock,
+}: {
+  block: ColorBlock;
+  collapsed: boolean;
+  selectedProductIds: Set<number>;
+  onToggleCollapse: () => void;
+  onToggleProduct: (productId: number) => void;
+  onToggleBlock: (productIds: number[]) => void;
+}) {
+  const blockIds = block.products.map((product) => product.id);
+  const allSelected =
+    blockIds.length > 0 && blockIds.every((id) => selectedProductIds.has(id));
+
+  return (
+    <section
+      className={`overflow-hidden rounded-lg border ${
+        block.isMissing ? "border-dashed" : ""
+      }`}
+    >
+      <div
+        className={`flex items-center gap-2 px-3 py-2 ${
+          block.isMissing ? "bg-muted/15" : "bg-muted/30"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          aria-expanded={!collapsed}
+        >
+          <HugeiconsIcon
+            icon={collapsed ? ArrowRight01Icon : ArrowDown01Icon}
+            className="size-4 shrink-0 text-muted-foreground"
+          />
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+            {block.label}
+          </span>
+          <Badge variant="outline" className="shrink-0">
+            {productsLabel(block.products.length)}
+          </Badge>
+        </button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onToggleBlock(blockIds)}
+        >
+          {allSelected ? "Зняти вибір" : "Вибрати всі"}
+        </Button>
+      </div>
+
+      {collapsed ? null : (
+        <div className="grid grid-cols-1 gap-3 border-t p-3 sm:grid-cols-2 lg:grid-cols-3">
+          {block.products.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              mode="embedded"
+              selected={selectedProductIds.has(product.id)}
+              onSelectionChange={() => onToggleProduct(product.id)}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 /** Модальное окно группы с товарами и действиями. */
 export function CategoryGroupDialog({
   cluster,
@@ -149,6 +232,17 @@ export function CategoryGroupDialog({
   const [selectedProductIds, setSelectedProductIds] = useState<Set<number>>(
     new Set(),
   );
+  const [collapsedColorKeys, setCollapsedColorKeys] = useState<Set<string>>(
+    new Set(),
+  );
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingRename, setEditingRename] = useState(false);
+  const [draftTitleRu, setDraftTitleRu] = useState(cluster?.title ?? "");
+  const [draftTitleUk, setDraftTitleUk] = useState(cluster?.titleUk ?? "");
+  const [isRenaming, setIsRenaming] = useState(false);
+  const renameCluster = useCategoryStore((state) => state.renameClusterProducts);
+  const colorBlocks = useMemo(() => splitProductsByColor(members), [members]);
+  const showColorBlocks = colorBlocks.length > 1;
 
   if (!cluster) return null;
 
@@ -174,6 +268,87 @@ export function CategoryGroupDialog({
     });
   };
 
+  /** Выбирает все товары блока целиком или снимает выбор со всех. */
+  const toggleBlock = (productIds: number[]) => {
+    setSelectedProductIds((current) => {
+      const allSelected = productIds.every((id) => current.has(id));
+      const next = new Set(current);
+      for (const id of productIds) {
+        if (allSelected) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleColorCollapse = (key: string) => {
+    setCollapsedColorKeys((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const handleStartEditTitle = () => {
+    setDraftTitleRu(cluster.title);
+    setDraftTitleUk(cluster.titleUk ?? "");
+    setEditingTitle(true);
+  };
+
+  const handleCancelEditTitle = () => {
+    setEditingTitle(false);
+    setDraftTitleRu(cluster.title);
+    setDraftTitleUk(cluster.titleUk ?? "");
+  };
+
+  const handleSaveTitle = useCallback(async () => {
+    if (!cluster) return;
+    const nextRu = draftTitleRu.trim();
+    const nextUk = draftTitleUk.trim() || undefined;
+    if (!nextRu) return;
+
+    setIsRenaming(true);
+    try {
+      const ok = await renameCluster(cluster.id, nextRu, nextUk);
+      if (ok) {
+        setEditingTitle(false);
+      }
+    } finally {
+      setIsRenaming(false);
+    }
+  }, [cluster, draftTitleRu, draftTitleUk, renameCluster]);
+
+  const handleSaveSelectedTitles = useCallback(async () => {
+    if (!cluster) return;
+    const nextRu = draftTitleRu.trim();
+    const nextUk = draftTitleUk.trim() || undefined;
+    if (!nextRu) return;
+
+    const productUpdates = new Map(
+      [...selectedProductIds].map((productId) => [
+        productId,
+        { goodsTitle: nextRu, goodsTitleUk: nextUk },
+      ]),
+    );
+
+    setIsRenaming(true);
+    try {
+      const ok = await renameCluster(
+        cluster.id,
+        nextRu,
+        nextUk,
+        productUpdates,
+      );
+      if (ok) {
+        setEditingRename(false);
+        setSelectedProductIds(new Set());
+      }
+    } finally {
+      setIsRenaming(false);
+    }
+  }, [cluster, draftTitleRu, draftTitleUk, selectedProductIds, renameCluster]);
+
   const handleSave = () => {
     if (!draftCategoryId) return;
     const category = categories.find((item) => item.id === draftCategoryId);
@@ -185,7 +360,17 @@ export function CategoryGroupDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-5xl">
         <DialogHeader>
-          <DialogTitle className="pr-8">{cluster.title}</DialogTitle>
+          <div className="flex items-center gap-2">
+            <DialogTitle className="pr-8">{cluster.title}</DialogTitle>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleStartEditTitle}
+              aria-label="Змінити назву групи"
+            >
+              <HugeiconsIcon icon={Edit02Icon} />
+            </Button>
+          </div>
           <DialogDescription>
             Група #{cluster.number} · {productsLabel(members.length)}
             {first?.goodsArticle ? ` · арт. ${first.goodsArticle}` : ""}
@@ -245,7 +430,106 @@ export function CategoryGroupDialog({
               Відокремити вибрані ({selectedCount})
             </Button>
           ) : null}
+          {selectedProductIds.size > 0 && !editingTitle && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDraftTitleRu(cluster.title);
+                setDraftTitleUk(cluster.titleUk ?? "");
+                setEditingRename(true);
+              }}
+              disabled={isRenaming}
+            >
+              Змінити назви
+            </Button>
+          )}
         </div>
+
+        {editingTitle ? (
+          <div className="mt-4 flex flex-col gap-2 rounded-lg border bg-muted/20 p-3">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span>Нова назва групи</span>
+            </div>
+            <Input
+              value={draftTitleRu}
+              onChange={(event) => setDraftTitleRu(event.target.value)}
+              placeholder={cluster.title}
+              aria-label="Назва групи (RU)"
+              className="w-full"
+            />
+            <Input
+              value={draftTitleUk}
+              onChange={(event) => setDraftTitleUk(event.target.value)}
+              placeholder={cluster.titleUk || ""}
+              aria-label="Назва групи (UA)"
+              className="w-full"
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelEditTitle}
+                disabled={isRenaming}
+              >
+                Скасувати
+              </Button>
+              <Button
+                onClick={handleSaveTitle}
+                disabled={isRenaming || !draftTitleRu.trim()}
+              >
+                {isRenaming ? "Зберігаю…" : "Зберегти"}
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Зміна назви групи застосується до всіх товарів кластера.
+            </p>
+          </div>
+        ) : null}
+
+        {editingRename ? (
+          <div className="mt-4 flex flex-col gap-2 rounded-lg border bg-muted/20 p-3">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span>Змінити назви вибраних товарів</span>
+            </div>
+            <Input
+              value={draftTitleRu}
+              onChange={(event) => setDraftTitleRu(event.target.value)}
+              placeholder={cluster.title}
+              aria-label="Нова назва (RU)"
+              className="w-full"
+            />
+            <Input
+              value={draftTitleUk}
+              onChange={(event) => setDraftTitleUk(event.target.value)}
+              placeholder={cluster.titleUk || ""}
+              aria-label="Нова назва (UA)"
+              className="w-full"
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setEditingRename(false);
+                  setDraftTitleRu(cluster.title);
+                  setDraftTitleUk(cluster.titleUk ?? "");
+                }}
+                disabled={isRenaming}
+              >
+                Скасувати
+              </Button>
+              <Button
+                onClick={handleSaveSelectedTitles}
+                disabled={isRenaming || !draftTitleRu.trim()}
+              >
+                {isRenaming ? "Зберігаю…" : "Зберегти"}
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Зміни застосуються лише до вибраних товарів ({selectedProductIds.size}).
+            </p>
+          </div>
+        ) : null}
 
         {links.length > 0 ? (
           <div className="flex flex-col gap-2 rounded-lg border border-dashed p-3">
@@ -266,17 +550,33 @@ export function CategoryGroupDialog({
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {members.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              mode="embedded"
-              selected={selectedProductIds.has(product.id)}
-              onSelectionChange={() => toggleProduct(product.id)}
-            />
-          ))}
-        </div>
+        {showColorBlocks ? (
+          <div className="flex flex-col gap-3">
+            {colorBlocks.map((block) => (
+              <ColorBlockSection
+                key={block.key || "no-color"}
+                block={block}
+                collapsed={collapsedColorKeys.has(block.key)}
+                selectedProductIds={selectedProductIds}
+                onToggleCollapse={() => toggleColorCollapse(block.key)}
+                onToggleProduct={toggleProduct}
+                onToggleBlock={toggleBlock}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {members.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                mode="embedded"
+                selected={selectedProductIds.has(product.id)}
+                onSelectionChange={() => toggleProduct(product.id)}
+              />
+            ))}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

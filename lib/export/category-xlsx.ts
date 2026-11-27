@@ -40,6 +40,31 @@ export async function exportCategoryChanges(
       },
       {
         header: {
+          value: "Название",
+          fontWeight: "bold",
+          backgroundColor: "#F4F4F5",
+          align: "center",
+          ...border,
+        },
+        width: 40,
+        cell: (row: CategoryExportRow) => ({ value: row.goodsTitle, ...border }),
+      },
+      {
+        header: {
+          value: "Название (UA)",
+          fontWeight: "bold",
+          backgroundColor: "#F4F4F5",
+          align: "center",
+          ...border,
+        },
+        width: 40,
+        cell: (row: CategoryExportRow) => ({
+          value: row.goodsTitleUk,
+          ...border,
+        }),
+      },
+      {
+        header: {
           value: "goods_category_title",
           fontWeight: "bold",
           backgroundColor: "#F4F4F5",

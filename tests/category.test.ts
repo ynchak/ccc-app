@@ -41,10 +41,12 @@ function parsed(
 function product(
   overrides: Partial<Product> & Pick<Product, "id" | "order">,
 ): Product {
+  const goodsTitle = overrides.goodsTitle ?? `Товар ${overrides.id}`;
   return {
     datasetId: 1,
     goodsId: String(overrides.id),
-    goodsTitle: `Товар ${overrides.id}`,
+    goodsTitle,
+    goodsTitleUk: goodsTitle,
     goodsArticle: "",
     producersTitle: "",
     categoryId: "cat-a",
@@ -135,6 +137,8 @@ test("экспорт категорий берёт только изменённ
   assert.deepEqual(buildCategoryChangeRows(products, clusters), [
     {
       id: "10",
+      goodsTitle: "Товар 1",
+      goodsTitleUk: "Товар 1",
       categoryTitle: "Категория B",
       categoryId: "cat-b",
     },
@@ -164,12 +168,16 @@ test("финальный экспорт содержит категорию и �
   assert.deepEqual(buildFinalExportRows(products, groups, new Map([[1, 10]])), [
     {
       id: "2",
+      goodsTitle: "Второй",
+      goodsTitleUk: "Второй",
       categoryTitle: "Категория A",
       categoryId: "cat-a",
       groupTitle: "Группа A",
     },
     {
       id: "1",
+      goodsTitle: "Первый",
+      goodsTitleUk: "Первый",
       categoryTitle: "Категория A",
       categoryId: "cat-a",
       groupTitle: "",

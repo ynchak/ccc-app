@@ -13,6 +13,8 @@ export interface Product {
   goodsId: string;
   /** Исходное название товара. Используется как название группы по умолчанию. */
   goodsTitle: string;
+  /** Название на українській — завантажується из колонки goods_title_uk. */
+  goodsTitleUk?: string;
   goodsArticle: string;
   /** Цена из файла (GOODS_PRICE). В старых файлах может отсутствовать. */
   goodsPrice?: string;
@@ -130,7 +132,10 @@ export interface CategoryCluster {
   datasetId: number;
   /** Постоянный номер кластера внутри файла. */
   number: number;
+  /** Отображаемое название на русском. */
   title: string;
+  /** Отображаемое название на українській. */
+  titleUk?: string;
   order: number;
   productIds: number[];
   /** Одна категория, выбранная для всей группы. Null — оставить как есть. */
@@ -165,6 +170,7 @@ export interface ColumnMapping {
 export type ColumnField =
   | "goodsId"
   | "goodsTitle"
+  | "goodsTitleUk"
   | "goodsArticle"
   | "goodsPrice"
   | "producersTitle"

@@ -42,6 +42,31 @@ export async function exportFinalXlsx(
       },
       {
         header: {
+          value: "Название",
+          fontWeight: "bold",
+          backgroundColor: "#F4F4F5",
+          align: "center",
+          ...border,
+        },
+        width: 40,
+        cell: (row: FinalExportRow) => ({ value: row.goodsTitle, ...border }),
+      },
+      {
+        header: {
+          value: "Название (UA)",
+          fontWeight: "bold",
+          backgroundColor: "#F4F4F5",
+          align: "center",
+          ...border,
+        },
+        width: 40,
+        cell: (row: FinalExportRow) => ({
+          value: row.goodsTitleUk,
+          ...border,
+        }),
+      },
+      {
+        header: {
           value: "goods_category_title",
           fontWeight: "bold",
           backgroundColor: "#F4F4F5",

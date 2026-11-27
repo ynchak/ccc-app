@@ -166,6 +166,7 @@ export interface ClusteredGroup {
   memberIndexes: number[];
   title: string;
   titleRaw: string;
+  titleUk?: string;
   titleKey: string;
   categoryId: string;
   categoryTitle: string;
@@ -200,6 +201,7 @@ export function toGroups(
       memberIndexes: cluster.memberIndexes,
       title,
       titleRaw: unescapeTitle(first.goodsTitle),
+      titleUk: first.goodsTitleUk || undefined,
       titleKey: normalizeTitle(title),
       categoryId: first.categoryId,
       categoryTitle: first.categoryTitle,

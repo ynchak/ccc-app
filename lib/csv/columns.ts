@@ -44,6 +44,7 @@ interface FieldSpec {
 const FIELD_SPECS: FieldSpec[] = [
   { field: "goodsId", label: "goods_id", base: "goods_id", required: true },
   { field: "goodsTitle", label: "goods_title", base: "goods_title", required: true },
+  { field: "goodsTitleUk", label: "goods_title_uk", base: "goods_title_uk" },
   { field: "goodsArticle", label: "goods_article", base: "goods_article" },
   { field: "goodsPrice", label: "GOODS_PRICE", base: "goods_price" },
   { field: "producersTitle", label: "producers_title", base: "producers_title" },
