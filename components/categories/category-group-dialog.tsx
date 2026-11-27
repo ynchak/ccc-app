@@ -7,6 +7,7 @@ import {
   ArrowRight01Icon,
   Edit02Icon,
   Link01Icon,
+  MoreHorizontalIcon,
   Scissor01Icon,
 } from "@hugeicons/core-free-icons";
 
@@ -21,6 +22,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cardGridStyle, type CardWidth } from "@/lib/card-size";
 import { CategoryPicker } from "@/components/categories/category-picker";
 import { splitProductsByColor, type ColorBlock } from "@/lib/category/color-blocks";
@@ -29,7 +38,6 @@ import { productsLabel } from "@/lib/plural";
 import {
   clusterCategories,
   targetCategoryFor,
-  
   useCategoryStore,
 } from "@/lib/store/category-store";
 import type { CategoryCluster, CategoryRef, Product } from "@/lib/types";
@@ -244,7 +252,7 @@ export function CategoryGroupDialog({
   const [draftColorByBlock, setDraftColorByBlock] = useState<Map<string, string>>(new Map());
   const [isRenaming, setIsRenaming] = useState(false);
   const renameCluster = useCategoryStore((state) => state.renameClusterProducts);
-  const updateClusterColorAction = (clusterId: number, color: string | null) => (useCategoryStore.getState() as any).updateClusterColor(clusterId, color);
+  const updateClusterColorAction = useCategoryStore.getState().updateClusterColor;
   const colorBlocks = useMemo(() => splitProductsByColor(members), [members]);
   const showColorBlocks = colorBlocks.length > 1;
 
@@ -491,19 +499,38 @@ export function CategoryGroupDialog({
               Відокремити вибрані ({selectedCount})
             </Button>
           ) : null}
-          {selectedProductIds.size > 0 && !editingTitle && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDraftTitleRu(cluster.title);
-                setDraftTitleUk(cluster.titleUk ?? "");
-                setEditingRename(true);
-              }}
-              disabled={isRenaming}
-            >
-              Змінити назви
-            </Button>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger>
+              <Button variant="outline">
+                <HugeiconsIcon icon={MoreHorizontalIcon} data-icon="inline-start" />
+                Дії
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuGroup>
+                {selectedProductIds.size > 0 && !editingTitle && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setDraftTitleRu(cluster.title);
+                      setDraftTitleUk(cluster.titleUk ?? "");
+                      setEditingRename(true);
+                    }}
+                    disabled={isRenaming}
+                  >
+                    Змінити назви
+                  </DropdownMenuItem>
+                )}
+                {!editingTitle && !editingRename && !editingColor && (
+                  <DropdownMenuItem
+                    onClick={handleStartEditColor}
+                    disabled={isRenaming || colorBlocks.length === 0}
+                  >
+                    Змінити кольори
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {editingTitle ? (

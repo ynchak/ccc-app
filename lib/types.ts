@@ -20,7 +20,7 @@ export interface Product {
   /** Оригинальное название на українській из CSV. */
   originalGoodsTitleUk?: string;
   /** Оригинальный цвет из CSV. */
-  originalColor?: string;
+  originalColor?: string | null;
   goodsArticle: string;
   /** Цена из файла (GOODS_PRICE). В старых файлах может отсутствовать. */
   goodsPrice?: string;

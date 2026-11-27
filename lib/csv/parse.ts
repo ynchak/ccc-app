@@ -66,6 +66,8 @@ export function parseCsv(text: string): ParseResult {
     );
     const goodsTitleUk = unescapeTitle(value("goodsTitleUk") ?? goodsTitle);
 
+    const colorValue = value("color") ?? null;
+
     products.push({
       order: products.length,
       goodsId,
@@ -73,8 +75,8 @@ export function parseCsv(text: string): ParseResult {
       originalGoodsTitle: goodsTitle,
       goodsTitleUk,
       originalGoodsTitleUk: goodsTitleUk,
-      color: value("color") ?? null,
-      originalColor: value("color") ?? null,
+      color: colorValue,
+      originalColor: colorValue,
       goodsArticle,
       goodsPrice: value("goodsPrice") ?? "",
       producersTitle: value("producersTitle") ?? "",
@@ -85,7 +87,6 @@ export function parseCsv(text: string): ParseResult {
       mdg: value("mdg"),
       description: value("description"),
       size: value("size"),
-      color: value("color"),
       height: value("height"),
       ean: value("ean"),
       imageUrls: parseImageUrls(value("imageUrls")),
