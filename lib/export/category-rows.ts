@@ -60,7 +60,7 @@ export function buildCategoryChangeRows(
             ? cluster?.targetCategoryId ?? originalId
             : "",
           titleChanged,
-          color: product.color,
+          color: colorChanged ? product.color : null,
           colorChanged,
         },
       ];
