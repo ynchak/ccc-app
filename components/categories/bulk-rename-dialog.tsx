@@ -146,7 +146,10 @@ export function BulkRenameDialog({
           <div className="space-y-2">
             <Tooltip>
               <TooltipTrigger>
-                <Label htmlFor="find-text">Замінити рядок</Label>
+                <div className="flex items-center gap-1">
+                  <Label htmlFor="find-text">Замінити рядок</Label>
+                  <span className="cursor-help text-muted-foreground">?</span>
+                </div>
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
                 <div className="space-y-1.5 text-xs">
