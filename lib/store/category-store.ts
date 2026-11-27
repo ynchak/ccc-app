@@ -304,7 +304,7 @@ interface CategoryState {
     clusterIds: number[],
     findText: string,
     replaceText: string,
-    options?: { titleRu?: boolean; titleUk?: boolean },
+    options?: { titleRu?: boolean; titleUk?: boolean; useRegex?: boolean },
   ) => Promise<number>;
   updateClusterColor: (
     clusterId: number,
@@ -819,13 +819,14 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
   },
 
   /**
-   * Массовая замена подстроки в названиях товаров выбранных кластеров.
+   * Массовая замена подстроки в названиях товаров выбранных кластерів.
    *
-   * Для каждого кластера берутся все его товары, в полях goodsTitle и
-   * goodsTitleUk подстрока `findText` заменяется на `replaceText`.
-   * Кластеры помечаются как изменённые вручную (manual = true).
+   * Для кожного кластера беруться всі його товари, в полях goodsTitle і
+   * goodsTitleUk підрядок `findText` замінюється на `replaceText`.
+   * Якщо `useRegex = true`, `findText` трактується як регулярне вираження.
+   * Кластери позначуються як змінені вручну (manual = true).
    *
-   * Возвращает количество обновлённых товаров.
+   * Повертає кількість оновлених товарів.
    */
   async renameClustersBatch(
     clusterIds,
@@ -847,13 +848,25 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
     const updatedProducts: Product[] = [];
     let updatedCount = 0;
 
-    const { titleRu = true, titleUk = true } = options;
+    const { titleRu = true, titleUk = true, useRegex = false } = options;
+
+    let regex: RegExp | null = null;
+    if (useRegex) {
+      try {
+        const re = new RegExp(findText);
+        // Замінюємо всі входження, додаючи прапорець g якщо його немає
+        const flags = re.flags.includes('g') ? re.flags : 'g' + re.flags;
+        regex = new RegExp(findText, flags);
+      } catch {
+        return 0;
+      }
+    }
 
     for (const clusterId of ids) {
       const cluster = nextClusters.get(clusterId);
       if (!cluster) continue;
 
-      // Помечаем кластер как изменённый вручную.
+      // Позначаємо кластер як змінений вручну.
       const updatedCluster: CategoryCluster = {
         ...cluster,
         manual: true,
@@ -867,11 +880,15 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
         let nextTitle = product.goodsTitle;
         let nextTitleUk = product.goodsTitleUk;
 
-        if (titleRu && nextTitle && nextTitle.includes(findText)) {
-          nextTitle = nextTitle.split(findText).join(replaceText);
+        if (titleRu && nextTitle) {
+          nextTitle = useRegex && regex
+            ? nextTitle.replace(regex, replaceText)
+            : nextTitle.split(findText).join(replaceText);
         }
-        if (titleUk && nextTitleUk && nextTitleUk.includes(findText)) {
-          nextTitleUk = nextTitleUk.split(findText).join(replaceText);
+        if (titleUk && nextTitleUk) {
+          nextTitleUk = useRegex && regex
+            ? nextTitleUk.replace(regex, replaceText)
+            : nextTitleUk.split(findText).join(replaceText);
         }
 
         const titleChanged = nextTitle !== product.goodsTitle;

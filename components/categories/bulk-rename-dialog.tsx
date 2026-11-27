@@ -39,33 +39,69 @@ export function BulkRenameDialog({
   const [replaceText, setReplaceText] = useState("");
   const [titleRu, setTitleRu] = useState(true);
   const [titleUk, setTitleUk] = useState(true);
+  const [useRegex, setUseRegex] = useState(false);
+  const [regexError, setRegexError] = useState<string | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
 
-  // Подсчёт товаров, в которых встречается findText
+  // Валідація регулярного виразу
+  useMemo(() => {
+    if (!useRegex || !findText) {
+      setRegexError(null);
+      return;
+    }
+    try {
+      new RegExp(findText);
+      setRegexError(null);
+    } catch (error) {
+      setRegexError(
+        error instanceof Error ? error.message : "Некоректне регулярне вираження",
+      );
+    }
+  }, [useRegex, findText]);
+
+  // Подрахунок товарів, де знайдено підрядок
   const totalAffected = useMemo(() => {
     if (!findText) return 0;
     let count = 0;
+    let regex: RegExp | null = null;
+    if (useRegex) {
+      try {
+        const re = new RegExp(findText);
+        const flags = re.flags.includes("g") ? re.flags : "g" + re.flags;
+        regex = new RegExp(findText, flags);
+      } catch {
+        return 0;
+      }
+    }
     for (const clusterId of clusterIds) {
       const cluster = clusters.get(clusterId);
       if (!cluster) continue;
       for (const productId of cluster.productIds) {
         const product = products.get(productId);
         if (!product) continue;
-        const hasRu = titleRu && product.goodsTitle?.includes(findText);
-        const hasUk = titleUk && product.goodsTitleUk?.includes(findText);
+        const hasRu =
+          titleRu &&
+          product.goodsTitle &&
+          (useRegex && regex ? regex.test(product.goodsTitle) : product.goodsTitle.includes(findText));
+        const hasUk =
+          titleUk &&
+          product.goodsTitleUk &&
+          (useRegex && regex ? regex.test(product.goodsTitleUk) : product.goodsTitleUk.includes(findText));
         if (hasRu || hasUk) count++;
       }
     }
     return count;
-  }, [clusterIds, clusters, products, findText, titleRu, titleUk]);
+  }, [clusterIds, clusters, products, findText, titleRu, titleUk, useRegex]);
 
   const handleSave = async () => {
     if (!findText) return;
+    if (useRegex && regexError) return;
     setIsRenaming(true);
     try {
       const count = await renameClustersBatch(clusterIds, findText, replaceText, {
         titleRu,
         titleUk,
+        useRegex,
       });
       if (count > 0) {
         onOpenChange(false);
@@ -95,10 +131,19 @@ export function BulkRenameDialog({
               id="find-text"
               value={findText}
               onChange={(event) => setFindText(event.target.value)}
-              placeholder="Наприклад: Нижня Білизна Жіноча Сіра"
+              placeholder={
+                useRegex
+                  ? "Наприклад: Нижня Білизна Жіноча .+"
+                  : "Наприклад: Нижня Білизна Жіноча Сіра"
+              }
               aria-label="Текст для заміни"
               className="w-full"
             />
+            {regexError && (
+              <p className="text-[11px] text-destructive">
+                {regexError}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -144,9 +189,24 @@ export function BulkRenameDialog({
                 Назва (UA)
               </Label>
             </div>
+            <div className="flex items-start gap-2">
+              <input
+                id="use-regex"
+                type="checkbox"
+                checked={useRegex}
+                onChange={(event) => setUseRegex(event.target.checked)}
+                disabled={isRenaming}
+              />
+              <Label
+                htmlFor="use-regex"
+                className="text-sm font-medium cursor-pointer disabled:opacity-50"
+              >
+                Регулярне вираження
+              </Label>
+            </div>
           </div>
 
-          {totalAffected === 0 && findText && (
+          {totalAffected === 0 && findText && !regexError && (
             <p className="text-xs text-muted-foreground">
               Товарів, де знайдено цей рядок, не знайдено.
             </p>
@@ -170,7 +230,8 @@ export function BulkRenameDialog({
                 isRenaming ||
                 !findText ||
                 !replaceText ||
-                (!titleRu && !titleUk)
+                (!titleRu && !titleUk) ||
+                Boolean(useRegex && regexError)
               }
             >
               {isRenaming ? "Перейменовую…" : "Перейменувати"}
