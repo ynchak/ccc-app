@@ -745,8 +745,13 @@ export function CategoryApp() {
 
   const handleBulkMove = async () => {
     if (!bulkTargetId || selectedClusterIds.size === 0) return;
-    const category = categories.find((item) => item.id === bulkTargetId);
-    if (!category) return;
+    // Ищем в списке для выбора: туда входит и общий справочник, поэтому
+    // перенос работает и в категорию, которой нет в этом файле.
+    const category = pickerCategories.find((item) => item.id === bulkTargetId);
+    if (!category) {
+      notify("Категорію не знайдено в довіднику", "error");
+      return;
+    }
     const count = await moveClustersToCategory(
       [...selectedClusterIds],
       category.id,
