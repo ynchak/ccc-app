@@ -7,11 +7,13 @@ export interface CategoryExportRow {
   goodsTitleUk?: string;
   categoryTitle: string;
   categoryId: string;
+  /** Название изменилось относительно оригинала из CSV. */
+  titleChanged: boolean;
 }
 
 /**
- * Формирует строки только для товаров, у которых целевая категория
- * отличается от исходной. Порядок — как в исходном файле.
+ * Формирует строки для товаров, у которых изменилась целевая категория
+ * или название. Порядок — как в исходном файле.
  */
 export function buildCategoryChangeRows(
   products: Iterable<Product>,
@@ -28,19 +30,27 @@ export function buildCategoryChangeRows(
     .sort((a, b) => a.order - b.order)
     .flatMap((product) => {
       const cluster = clusterByProduct.get(product.id);
-      if (!cluster?.targetCategoryId) return [];
       const originalId = product.originalCategoryId ?? product.categoryId;
-      if (originalId === cluster.targetCategoryId) return [];
+      const categoryChanged =
+        cluster?.targetCategoryId &&
+        originalId !== cluster.targetCategoryId;
+      const titleChanged =
+        product.goodsTitle !== (product.originalGoodsTitle ?? product.goodsTitle) ||
+        product.goodsTitleUk !== (product.originalGoodsTitleUk ?? product.goodsTitleUk);
+
+      if (!categoryChanged && !titleChanged) return [];
+
       return [
         {
           id: product.goodsId,
           goodsTitle: product.goodsTitle,
           goodsTitleUk: product.goodsTitleUk,
           categoryTitle:
-            cluster.targetCategoryTitle ||
+            cluster?.targetCategoryTitle ||
             product.categoryTitle ||
             "Без категорії",
-          categoryId: cluster.targetCategoryId,
+          categoryId: cluster?.targetCategoryId ?? originalId,
+          titleChanged,
         },
       ];
     });

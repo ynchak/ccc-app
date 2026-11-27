@@ -13,8 +13,12 @@ export interface Product {
   goodsId: string;
   /** Исходное название товара. Используется как название группы по умолчанию. */
   goodsTitle: string;
+  /** Оригинальное название из CSV — не меняется при переименованиях. */
+  originalGoodsTitle?: string;
   /** Название на українській — завантажується из колонки goods_title_uk. */
   goodsTitleUk?: string;
+  /** Оригинальное название на українській из CSV. */
+  originalGoodsTitleUk?: string;
   goodsArticle: string;
   /** Цена из файла (GOODS_PRICE). В старых файлах может отсутствовать. */
   goodsPrice?: string;

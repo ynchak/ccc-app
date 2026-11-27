@@ -141,6 +141,34 @@ test("экспорт категорий берёт только изменённ
       goodsTitleUk: "Товар 1",
       categoryTitle: "Категория B",
       categoryId: "cat-b",
+      titleChanged: false,
+    },
+  ]);
+});
+
+test("экспорт категорий включает товары с изменённым названием без смены категории", () => {
+  const products = [
+    product({
+      id: 1,
+      order: 0,
+      goodsId: "10",
+      goodsTitle: "Брюки синие",
+      originalGoodsTitle: "Джинсы синие",
+      goodsTitleUk: "Брючні сині",
+      originalGoodsTitleUk: "Джинси сині",
+    }),
+  ];
+  const clusters = [
+    cluster({ id: 1, productIds: [1] }),
+  ];
+  assert.deepEqual(buildCategoryChangeRows(products, clusters), [
+    {
+      id: "10",
+      goodsTitle: "Брюки синие",
+      goodsTitleUk: "Брючні сині",
+      categoryTitle: "Категория A",
+      categoryId: "cat-a",
+      titleChanged: true,
     },
   ]);
 });
