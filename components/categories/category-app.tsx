@@ -12,9 +12,11 @@ import {
   GroupLayersIcon,
   Menu01Icon,
   MoreHorizontalIcon,
+  Search01Icon,
 } from "@hugeicons/core-free-icons";
 
 import { AddCategoryDialog } from "@/components/categories/add-category-dialog";
+import { BulkRenameDialog } from "@/components/categories/bulk-rename-dialog";
 import { CategoryGroupDialog } from "@/components/categories/category-group-dialog";
 import { CategoryHeaderControls } from "@/components/categories/category-header-controls";
 import { CategorySectionBlock } from "@/components/categories/category-section";
@@ -452,6 +454,7 @@ export function CategoryApp() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [addCategoryOpen, setAddCategoryOpen] = useState(false);
+  const [bulkRenameOpen, setBulkRenameOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Dataset | null>(null);
   const [transitionOpen, setTransitionOpen] = useState(false);
   const [clearUserCategoriesOpen, setClearUserCategoriesOpen] = useState(false);
@@ -1077,9 +1080,26 @@ export function CategoryApp() {
             >
               Очистити
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBulkTargetId("");
+                setBulkRenameOpen(true);
+              }}
+            >
+              <HugeiconsIcon icon={Search01Icon} data-icon="inline-start" />
+              Перейменувати вибрані
+            </Button>
           </div>
         </div>
       ) : null}
+
+      <BulkRenameDialog
+        open={bulkRenameOpen}
+        onOpenChange={setBulkRenameOpen}
+        clusterIds={[...selectedClusterIds]}
+        products={products}
+      />
 
       <CategoryGroupDialog
         key={

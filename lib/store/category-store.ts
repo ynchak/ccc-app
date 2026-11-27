@@ -299,6 +299,13 @@ interface CategoryState {
       { goodsTitle: string; goodsTitleUk?: string }
     >,
   ) => Promise<boolean>;
+  /** Массовая замена подстроки в названиях товаров выбранных кластеров. */
+  renameClustersBatch: (
+    clusterIds: number[],
+    findText: string,
+    replaceText: string,
+    options?: { titleRu?: boolean; titleUk?: boolean },
+  ) => Promise<number>;
   updateClusterColor: (
     clusterId: number,
     color: string | null,
@@ -809,6 +816,100 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
 
     recordUndo(beforeClusters, "Перейменовано товари групи", beforeProducts);
     return true;
+  },
+
+  /**
+   * Массовая замена подстроки в названиях товаров выбранных кластеров.
+   *
+   * Для каждого кластера берутся все его товары, в полях goodsTitle и
+   * goodsTitleUk подстрока `findText` заменяется на `replaceText`.
+   * Кластеры помечаются как изменённые вручную (manual = true).
+   *
+   * Возвращает количество обновлённых товаров.
+   */
+  async renameClustersBatch(
+    clusterIds,
+    findText,
+    replaceText,
+    options = {},
+  ) {
+    const state = get();
+    const ids = [...new Set(clusterIds)].filter((id) =>
+      state.clusters.has(id),
+    );
+    if (ids.length === 0 || !findText) return 0;
+
+    const beforeClusters = state.clusters;
+    const beforeProducts = state.products;
+
+    const nextClusters = new Map(state.clusters);
+    const nextProducts = new Map(state.products);
+    const updatedProducts: Product[] = [];
+    let updatedCount = 0;
+
+    const { titleRu = true, titleUk = true } = options;
+
+    for (const clusterId of ids) {
+      const cluster = nextClusters.get(clusterId);
+      if (!cluster) continue;
+
+      // Помечаем кластер как изменённый вручную.
+      const updatedCluster: CategoryCluster = {
+        ...cluster,
+        manual: true,
+      };
+      nextClusters.set(clusterId, updatedCluster);
+
+      for (const productId of cluster.productIds) {
+        const product = nextProducts.get(productId);
+        if (!product) continue;
+
+        let nextTitle = product.goodsTitle;
+        let nextTitleUk = product.goodsTitleUk;
+
+        if (titleRu && nextTitle && nextTitle.includes(findText)) {
+          nextTitle = nextTitle.split(findText).join(replaceText);
+        }
+        if (titleUk && nextTitleUk && nextTitleUk.includes(findText)) {
+          nextTitleUk = nextTitleUk.split(findText).join(replaceText);
+        }
+
+        const titleChanged = nextTitle !== product.goodsTitle;
+        const titleUkChanged = nextTitleUk !== product.goodsTitleUk;
+
+        if (!titleChanged && !titleUkChanged) continue;
+
+        const updated: Product = {
+          ...product,
+          goodsTitle: titleChanged ? nextTitle : product.goodsTitle,
+          goodsTitleUk: titleUkChanged ? nextTitleUk : product.goodsTitleUk,
+        };
+        nextProducts.set(productId, updated);
+        updatedProducts.push(updated);
+        updatedCount++;
+      }
+    }
+
+    if (updatedCount === 0) return 0;
+
+    await putProducts(updatedProducts);
+    await putCategoryClusters([...nextClusters.values()].filter(
+      (c) => ids.includes(c.id),
+    ));
+
+    set({
+      clusters: nextClusters,
+      products: nextProducts,
+      selectedClusterIds: new Set(),
+      lastSavedAt: Date.now(),
+    });
+
+    recordUndo(
+      beforeClusters,
+      "Масове перейменування назв товарів",
+      beforeProducts,
+    );
+    return updatedCount;
   },
 
   async moveClustersToCategory(clusterIds, categoryId, categoryTitle) {
