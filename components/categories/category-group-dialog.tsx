@@ -5,7 +5,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowDown01Icon,
   ArrowRight01Icon,
-  Edit02Icon,
   Link01Icon,
   MoreHorizontalIcon,
   Scissor01Icon,
@@ -429,17 +428,7 @@ export function CategoryGroupDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-5xl">
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <DialogTitle className="pr-8">{cluster.title}</DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={handleStartEditTitle}
-              aria-label="Змінити назву групи"
-            >
-              <HugeiconsIcon icon={Edit02Icon} />
-            </Button>
-          </div>
+          <DialogTitle className="pr-8">{cluster.title}</DialogTitle>
           <DialogDescription>
             Група #{cluster.number} · {productsLabel(members.length)}
             {first?.goodsArticle ? ` · арт. ${first.goodsArticle}` : ""}
@@ -499,16 +488,28 @@ export function CategoryGroupDialog({
               Відокремити вибрані ({selectedCount})
             </Button>
           ) : null}
-          <DropdownMenu>
-            <DropdownMenuTrigger>
-              <Button variant="outline">
-                <HugeiconsIcon icon={MoreHorizontalIcon} data-icon="inline-start" />
-                Дії
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuGroup>
-                {selectedProductIds.size > 0 && !editingTitle && (
+        </div>
+
+        <div className="mt-4 flex flex-col gap-2 rounded-lg border bg-muted/20 p-3">
+          <div className="flex items-start gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger>
+                <Button variant="outline" size="sm">
+                  <HugeiconsIcon icon={MoreHorizontalIcon} data-icon="inline-start" />
+                  Дії
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuGroup>
+                {!editingTitle && !editingRename && !editingColor && (
+                  <DropdownMenuItem
+                    onClick={handleStartEditTitle}
+                    disabled={isRenaming}
+                  >
+                    Змінити назву групи
+                  </DropdownMenuItem>
+                )}
+                {selectedProductIds.size > 0 && !editingTitle && !editingRename && !editingColor && (
                   <DropdownMenuItem
                     onClick={() => {
                       setDraftTitleRu(cluster.title);
@@ -529,95 +530,95 @@ export function CategoryGroupDialog({
                   </DropdownMenuItem>
                 )}
               </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="min-w-0 flex-1">
+              {editingTitle || editingRename || editingColor ? null : (
+                <div className="text-sm font-medium truncate">
+                  {cluster.title}
+                </div>
+              )}
+              {editingTitle && (
+                <div className="flex flex-col gap-1">
+                  <Input
+                    value={draftTitleRu}
+                    onChange={(event) => setDraftTitleRu(event.target.value)}
+                    placeholder={cluster.title}
+                    aria-label="Назва групи (RU)"
+                    className="w-full text-sm"
+                  />
+                  <Input
+                    value={draftTitleUk}
+                    onChange={(event) => setDraftTitleUk(event.target.value)}
+                    placeholder={cluster.titleUk || ""}
+                    aria-label="Назва групи (UA)"
+                    className="w-full text-sm"
+                  />
+                  <div className="flex gap-2 mt-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelEditTitle}
+                      disabled={isRenaming}
+                    >
+                      Скасувати
+                    </Button>
+                    <Button
+                      onClick={handleSaveTitle}
+                      disabled={isRenaming || !draftTitleRu.trim()}
+                    >
+                      {isRenaming ? "Зберігаю…" : "Зберегти"}
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Зміна назви групи застосується до всіх товарів кластера.
+                  </p>
+                </div>
+              )}
+              {editingRename && (
+                <div className="flex flex-col gap-1">
+                  <Input
+                    value={draftTitleRu}
+                    onChange={(event) => setDraftTitleRu(event.target.value)}
+                    placeholder={cluster.title}
+                    aria-label="Нова назва (RU)"
+                    className="w-full text-sm"
+                  />
+                  <Input
+                    value={draftTitleUk}
+                    onChange={(event) => setDraftTitleUk(event.target.value)}
+                    placeholder={cluster.titleUk || ""}
+                    aria-label="Нова назва (UA)"
+                    className="w-full text-sm"
+                  />
+                  <div className="flex gap-2 mt-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingRename(false);
+                        setDraftTitleRu(cluster.title);
+                        setDraftTitleUk(cluster.titleUk ?? "");
+                      }}
+                      disabled={isRenaming}
+                    >
+                      Скасувати
+                    </Button>
+                    <Button
+                      onClick={handleSaveSelectedTitles}
+                      disabled={isRenaming || !draftTitleRu.trim()}
+                    >
+                      {isRenaming ? "Зберігаю…" : "Зберегти"}
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Зміни застосуються лише до вибраних товарів ({selectedProductIds.size}).
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-
-        {editingTitle ? (
-          <div className="mt-4 flex flex-col gap-2 rounded-lg border bg-muted/20 p-3">
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-              <span>Нова назва групи</span>
-            </div>
-            <Input
-              value={draftTitleRu}
-              onChange={(event) => setDraftTitleRu(event.target.value)}
-              placeholder={cluster.title}
-              aria-label="Назва групи (RU)"
-              className="w-full"
-            />
-            <Input
-              value={draftTitleUk}
-              onChange={(event) => setDraftTitleUk(event.target.value)}
-              placeholder={cluster.titleUk || ""}
-              aria-label="Назва групи (UA)"
-              className="w-full"
-            />
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCancelEditTitle}
-                disabled={isRenaming}
-              >
-                Скасувати
-              </Button>
-              <Button
-                onClick={handleSaveTitle}
-                disabled={isRenaming || !draftTitleRu.trim()}
-              >
-                {isRenaming ? "Зберігаю…" : "Зберегти"}
-              </Button>
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              Зміна назви групи застосується до всіх товарів кластера.
-            </p>
-          </div>
-        ) : null}
-
-        {editingRename ? (
-          <div className="mt-4 flex flex-col gap-2 rounded-lg border bg-muted/20 p-3">
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-              <span>Змінити назви вибраних товарів</span>
-            </div>
-            <Input
-              value={draftTitleRu}
-              onChange={(event) => setDraftTitleRu(event.target.value)}
-              placeholder={cluster.title}
-              aria-label="Нова назва (RU)"
-              className="w-full"
-            />
-            <Input
-              value={draftTitleUk}
-              onChange={(event) => setDraftTitleUk(event.target.value)}
-              placeholder={cluster.titleUk || ""}
-              aria-label="Нова назва (UA)"
-              className="w-full"
-            />
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setEditingRename(false);
-                  setDraftTitleRu(cluster.title);
-                  setDraftTitleUk(cluster.titleUk ?? "");
-                }}
-                disabled={isRenaming}
-              >
-                Скасувати
-              </Button>
-              <Button
-                onClick={handleSaveSelectedTitles}
-                disabled={isRenaming || !draftTitleRu.trim()}
-              >
-                {isRenaming ? "Зберігаю…" : "Зберегти"}
-              </Button>
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              Зміни застосуються лише до вибраних товарів ({selectedProductIds.size}).
-            </p>
-          </div>
-        ) : null}
 
         {editingColor ? (
           <div className="mt-4 flex flex-col gap-2 rounded-lg border bg-muted/20 p-3">
