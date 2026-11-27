@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowDown01Icon,
-  ArrowUp01Icon,
   Search01Icon,
 } from "@hugeicons/core-free-icons";
 
@@ -206,21 +205,13 @@ export function BulkRenameDialog({
               className="w-full"
             />
             <Collapsible>
-              <CollapsibleTrigger render={() => (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-left gap-2"
-                >
-                  <HugeiconsIcon
-                    icon={
-                      open ? ArrowUp01Icon : ArrowDown01Icon
-                    }
-                    data-icon="inline-start"
-                  />
-                  Приклади використання
-                </Button>
-              )} />
+              <CollapsibleTrigger className="w-full text-left gap-2">
+                <HugeiconsIcon
+                  icon={ArrowDown01Icon}
+                  data-icon="inline-start"
+                />
+                Приклади використання
+              </CollapsibleTrigger>
               <CollapsibleContent className="mt-2 space-y-3 p-3 rounded-lg border bg-muted/50">
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-foreground">
