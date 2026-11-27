@@ -866,12 +866,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
       const cluster = nextClusters.get(clusterId);
       if (!cluster) continue;
 
-      // Позначаємо кластер як змінений вручну.
-      const updatedCluster: CategoryCluster = {
-        ...cluster,
-        manual: true,
-      };
-      nextClusters.set(clusterId, updatedCluster);
+      let clusterChanged = false;
 
       for (const productId of cluster.productIds) {
         const product = nextProducts.get(productId);
@@ -904,6 +899,22 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
         nextProducts.set(productId, updated);
         updatedProducts.push(updated);
         updatedCount++;
+        clusterChanged = true;
+      }
+
+      // Перерахувати назву кластера на основі першого товару (як і при створенні кластерів).
+      if (clusterChanged) {
+        const firstProductId = cluster.productIds[0];
+        const firstProduct = nextProducts.get(firstProductId);
+        if (firstProduct) {
+          const newTitle = defaultGroupTitle(firstProduct);
+          const updatedCluster: CategoryCluster = {
+            ...nextClusters.get(clusterId)!,
+            title: newTitle,
+            manual: true,
+          };
+          nextClusters.set(clusterId, updatedCluster);
+        }
       }
     }
 
